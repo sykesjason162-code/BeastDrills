@@ -16,6 +16,27 @@ one.
 
 It runs entirely on your machine, in offline Training Mode.
 
+![Your profile: drills, sessions, success rate and best streak for each character](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/profile.jpg)
+
+## What it looks like
+
+**Your drills.** Search, filter by character, star favourites, and see how
+each one is going at a glance. New drills can be written right here, or
+saved straight from a Training Mode setup.
+
+![The Drills page](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/drills.jpg)
+
+**Where you get hit.** Every hit you take or land, by height and by side,
+for each matchup.
+
+![Hit zones](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/hit_zones.jpg)
+
+**How it is sticking.** A practice calendar, how often you pass drills you
+have already learned, and a forecast of what comes due, the way Anki shows
+it.
+
+![Stats](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/stats.jpg)
+
 ---
 
 ## What you need
