@@ -26,11 +26,6 @@ saved straight from a Training Mode setup.
 
 ![The Drills page](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/drills.jpg)
 
-**Where you get hit.** Every hit you take or land, by height and by side,
-for each matchup.
-
-![Hit zones](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/hit_zones.jpg)
-
 **How it is sticking.** A practice calendar, how often you pass drills you
 have already learned, and a forecast of what comes due, the way Anki shows
 it.
