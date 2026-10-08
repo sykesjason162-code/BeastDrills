@@ -1,0 +1,26 @@
+[project]
+name = "beast-drills"
+# The public beta. PEP 440 spelling of 0.1.0-beta, the version the
+# release build stamps into modinfo.ini and the zip name.
+version = "0.1.0b0"
+description = "Beast Drills' local service and dashboard: grading, scheduling and the web UI. Talks to the game only through files on disk (see docs/SERVICE.md)."
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+# Only the dashboard needs this -- beast_drills.service itself stays
+# stdlib-only, exactly as before. First external dependency this project
+# has ever added. Install with: pip install -e ".[dashboard]"
+dashboard = ["flask>=3.0"]
+
+[tool.setuptools.packages.find]
+# Named, not discovered. Automatic discovery saw service/logs -- a
+# runtime folder -- as a second top-level package and refused to build,
+# which surfaced when the package was renamed to beast_drills.
+include = ["beast_drills*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# pytest's default tmp_path base (system %TEMP%) hit a permissions error
+# in this sandboxed environment -- redirect to a local dir instead.
+addopts = "--basetemp=.pytest_tmp"

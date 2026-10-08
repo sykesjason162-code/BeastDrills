@@ -1,0 +1,78 @@
+{
+  "app.EConfigInitLayout": {
+    "0": "CENTER",
+    "1": "RIGHT",
+    "2": "LEFT",
+    "3": "MANUAL",
+    "4": "MAX"
+  },
+  "app.training.DRIVE_REVERSAL_TYPE": {
+    "0": "OFF",
+    "1": "GUARD",
+    "2": "GET_UP",
+    "3": "RANDOM"
+  },
+  "app.training.TM_COMMON_TYPE": {
+    "0": "OFF",
+    "1": "ON",
+    "2": "RANDOM"
+  },
+  "app.training.TM_DG_GAUGE_TYPE": {
+    "0": "NONE",
+    "1": "STOCK",
+    "2": "EMPTY_LOCK",
+    "3": "POINT"
+  },
+  "app.training.TM_DP_TYPE": {
+    "0": "OFF",
+    "1": "PARRY",
+    "2": "JUST",
+    "3": "RANDOM"
+  },
+  "app.training.TM_DS_DUMMYTYPE": {
+    "0": "STAND",
+    "1": "CROUCH",
+    "2": "JUMP",
+    "3": "SHORT_REPLAY",
+    "4": "HUMAN",
+    "5": "CPU"
+  },
+  "app.training.TM_DS_JUMPTYPE": {
+    "0": "VIRTICAL",
+    "1": "FRONT",
+    "2": "BACK",
+    "3": "RANDOM"
+  },
+  "app.training.TM_GS_GUARD_TYPE": {
+    "0": "NO_GUARD",
+    "1": "GAP_GUARD",
+    "2": "NEXT_GUARD",
+    "3": "ALL_GUARD",
+    "4": "RANDOM_GUARD",
+    "5": "COUNT_GUARD"
+  },
+  "app.training.TM_SA_GAUGE_TYPE": {
+    "0": "NONE",
+    "1": "STOCK",
+    "2": "POINT"
+  },
+  "app.training.TM_VITAL_POINT_TYPE": {
+    "0": "NONE",
+    "1": "PERCENTAGE",
+    "2": "POINT"
+  },
+  "app.training.TM_VITAL_TYPE": {
+    "0": "NONE",
+    "1": "VITAL_00",
+    "2": "VITAL_10",
+    "3": "VITAL_20",
+    "4": "VITAL_30",
+    "5": "VITAL_40",
+    "6": "VITAL_50",
+    "7": "VITAL_60",
+    "8": "VITAL_70",
+    "9": "VITAL_80",
+    "10": "VITAL_90",
+    "11": "VITAL_100"
+  }
+}

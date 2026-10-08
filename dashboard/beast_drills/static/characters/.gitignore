@@ -1,0 +1,7 @@
+# Character art IS tracked (2026-08-17, Jason's call): this is a private
+# repo and a non-commercial personal tool, so Capcom enforcement risk is
+# not a real concern here. Kept as a file rather than deleted so the
+# reasoning survives -- if this ever goes public, reinstate the ignore
+# and purge history, because git keeps every version of a binary forever.
+#
+# Drop <character_id>.png here, matching shared_database.json's ids.

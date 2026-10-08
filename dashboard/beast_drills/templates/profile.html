@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills &mdash; Profile</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='profile' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  {#
+    A character's whole record in one place, laid out like Buckler's own
+    Profile: a title band with the character picker, then a hero block
+    with the fighter large on the left and their headline numbers on the
+    right, then a row of smaller panels.
+
+    Jason: "It doesn't really need to show the left and right icons" --
+    the left/right hit-zone figures belong on the dashboard, where the
+    matchup is being narrowed. Here the zones are a single summary across
+    every side and dummy, because this page is the overall record.
+  #}
+  <div class="pf-title">
+    <h1 data-t>Profile</h1>
+    <label class="pf-picker">
+      <span>Character</span>
+      <select id="pf-character"></select>
+    </label>
+    <!-- Share and view, never merge. The exported file holds per-character
+         SUMMARIES only -- no drills, no ids, no scheduling -- so it cannot
+         describe a drill and therefore cannot overwrite one. A viewed
+         profile lives in memory for as long as you are looking at it. -->
+    <div class="pf-share">
+      <a class="btn" href="/api/profile/export" download>Export</a>
+      <button class="btn" type="button" id="pf-import-btn" data-t>View a profile</button>
+      <input type="file" id="pf-import-file" accept="application/json,.json" hidden>
+    </div>
+  </div>
+
+  <!-- Shown only while a shared profile is open, so there is never any
+       doubt about whose numbers are on screen. -->
+  <div class="pf-viewing" id="pf-viewing" hidden>
+    <span id="pf-viewing-text"></span>
+    <button class="btn" type="button" id="pf-viewing-exit" data-t>Back to my profile</button>
+  </div>
+
+  <section class="panel" id="overview-panel">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_profile.png')">
+      <h2 data-t>Overview</h2>
+    </div>
+    <div class="pf-hero" id="pf-hero"></div>
+  </section>
+
+  <div class="pf-row">
+    <section class="panel panel-cyan">
+      <div class="panel-head" style="--head-icon:url('/static/sf6/icon_stats.png')">
+        <h2 data-t>Drill Mix</h2>
+      </div>
+      <div class="pf-donut-wrap" id="pf-donut"></div>
+    </section>
+
+    <section class="panel panel-magenta">
+      <div class="panel-head" style="--head-icon:url('/static/sf6/icon_earth.png')">
+        <h2 data-t>Hit Zones</h2>
+      </div>
+      <div class="pf-zones" id="pf-zones"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head" style="--head-icon:url('/static/sf6/icon_cfn.png')">
+        <h2 data-t>Needs Work</h2>
+      </div>
+      <div class="pf-drills" id="pf-drills"></div>
+    </section>
+  </div>
+
+  <!-- What actually happened in play, kept per matchup. The live tally
+       resets every session on purpose; this is the durable record beside
+       it, and it is the only place free-play counts survive at all --
+       before this they only reached a database inside a scrimmage. -->
+  <section class="panel panel-cyan" id="pf-tally-panel">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_stats.png')">
+      <h2 data-t>Tally</h2>
+      <label class="pf-pick">vs
+        <select id="pf-tally-dummy"></select>
+      </label>
+    </div>
+    <div class="pf-tally" id="pf-tally"></div>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='labels.js') }}"></script>
+<script src="{{ url_for('static', filename='profile.js') }}"></script>
+</body>
+</html>

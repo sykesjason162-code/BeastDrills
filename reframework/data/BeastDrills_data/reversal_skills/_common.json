@@ -1,0 +1,29 @@
+{
+ "COMMON": [
+  "Do Nothing",
+  "Forward",
+  "Backward",
+  "Forward Dash",
+  "Back Dash",
+  "Vertical Jump",
+  "Forward Jump",
+  "Backward Jump",
+  "Normal Throw",
+  "Drive Parry",
+  "Drive Impact"
+ ],
+ "NORMAL": [
+  "Light Punch",
+  "Medium Punch",
+  "Heavy Punch",
+  "Light Kick",
+  "Medium Kick",
+  "Heavy Kick",
+  "Crouching Light Punch",
+  "Crouching Medium Punch",
+  "Crouching Heavy Punch",
+  "Crouching Light Kick",
+  "Crouching Medium Kick",
+  "Crouching Heavy Kick"
+ ]
+}

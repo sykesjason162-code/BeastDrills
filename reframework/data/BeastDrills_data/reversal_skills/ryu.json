@@ -1,0 +1,22 @@
+{
+ "COMMAND_NORMAL": [
+  "Collarbone Breaker",
+  "Solar Plexus Strike",
+  "Axe Kick",
+  "Whirlwind Kick",
+  "Short Uppercut"
+ ],
+ "SPECIAL": [
+  "Hadoken",
+  "Shoryuken",
+  "Tatsumaki Senpu-kyaku",
+  "High Blade Kick",
+  "Hashogeki",
+  "Denjin Charge"
+ ],
+ "SA": [
+  "Shinku Hadoken",
+  "Shin Hashogeki",
+  "Shin Shoryuken"
+ ]
+}

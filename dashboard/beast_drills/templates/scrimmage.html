@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills &mdash; Scrimmage</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='scrimmage.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='scrimmage' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  <!--
+    Jason, 2026-08-28: "I like the history, but it should be a drop down
+    or something. It shouldn't be the page. The page should show a
+    breakdown of the chosen scrimmage from history using text and
+    graphs."
+
+    So the history is two selects in one row, and everything below is one
+    set examined closely.
+  -->
+  <div class="scrim-picker">
+    <label>Matchup <select id="scrim-matchup"></select></label>
+    <label>Set <select id="scrim-session"></select></label>
+  </div>
+
+  <p class="muted" id="scrim-empty" style="display:none">
+    No scrimmages yet. Start one from the SCRIMMAGE menu in game &mdash; three
+    rounds against the CPU, scored on the tally.
+  </p>
+
+  <div id="scrim-detail"></div>
+</div>
+<script src="/static/labels.js"></script>
+<script src="/static/scrimmage.js"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills Dashboard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='dashboard' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  <section class="panel panel-cyan" id="live-panel">
+    <div class="panel-head">
+      <h2 data-t>Live</h2>
+      <span id="live-freshness" class="freshness">no data</span>
+    </div>
+    <div id="live-body" class="live-body">
+      <p class="dim">Waiting for a live session status...</p>
+    </div>
+  </section>
+
+  <!-- Hit Zones (2026-08-18): the single character <select> that used to
+       sit in this panel head is now a full character-select strip, styled
+       after SF6's own (Jason: "We are going to add the same style
+       character select as in image 2"), and it picks BOTH sides of the
+       matchup -- hit-zone and tally data is player-character AND
+       dummy-character dependent, so one dropdown could never express the
+       view being asked for. The matchup reads "Player X vs Dummy Y" and
+       is remembered across reloads. -->
+  <section class="panel panel-magenta" id="hit-zones-panel">
+    <div class="panel-head">
+      <h2 data-t>Hit Zones</h2>
+      <div class="matchup" id="hz-matchup">
+        <button type="button" class="matchup-slot is-active" data-slot="player">
+          <span class="matchup-role">Player</span>
+          <span class="matchup-name" data-slot-name="player">&mdash;</span>
+        </button>
+        <span class="matchup-vs">vs</span>
+        <button type="button" class="matchup-slot" data-slot="dummy">
+          <span class="matchup-role">Dummy</span>
+          <span class="matchup-name" data-slot-name="dummy">&mdash;</span>
+        </button>
+        <label class="follow-game" title="Follow the characters loaded in the game">
+          <input type="checkbox" class="bd-switch" id="hz-follow-game"> Follow game
+        </label>
+        <!-- Which map. Taken is where you GET hit (defence); dealt is
+             where you LAND hits (offence). One toggle rather than two
+             silhouettes side by side, so the reader compares heights in
+             one place rather than across two panels.
+
+             The FIGURE changes with it, because the body being hit does:
+             taken draws you, dealt draws the dummy. hz-whose says which,
+             since two directions on one silhouette is otherwise easy to
+             misread as one character's whole record. -->
+        <div class="hz-direction" role="group" aria-label="Hit zone direction">
+          <button type="button" class="btn hz-dir-btn is-on" data-dir="taken" data-t>Taken</button>
+          <button type="button" class="btn hz-dir-btn" data-dir="dealt" data-t>Dealt</button>
+        </div>
+        <span class="hz-whose" id="hz-whose"></span>
+      </div>
+    </div>
+    <!-- Character select sits BETWEEN the two side figures (Jason: "The
+         character selection will be in the middle of 2 hitzone dummy
+         images. One for the right and one for the left tracking."). Each
+         figure is the same silhouette, fed only the hits taken while
+         starting on that side. -->
+    <div class="hz-layout">
+      <div class="hz-side" id="hz-side-left"></div>
+      <div class="charselect" id="hz-charselect" role="listbox" aria-label="Character select"></div>
+      <div class="hz-side" id="hz-side-right"></div>
+    </div>
+  </section>
+
+</div>
+
+<script src="{{ url_for('static', filename='labels.js') }}"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

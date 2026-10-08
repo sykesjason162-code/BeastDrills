@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills Help</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='help' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  <div class="help-layout">
+  <nav class="help-toc">
+    <a href="#practising">Practising</a>
+    <a href="#in-game">In-game</a>
+    <a href="#pages">The pages</a>
+    <a href="#wongscript">WongScript</a>
+    <a href="#dashboard-tools">Creating drills</a>
+  </nav>
+
+  <section class="panel panel-cyan" id="practising">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_cfn.png')">
+      <h2>Practising</h2>
+    </div>
+    <div class="help-body">
+      <p>Beast Drills is spaced repetition for Street Fighter. Each drill is a saved
+      Training Mode setup plus a rule for what counts as success. You practise the
+      ones that are <em>due</em>, the app watches what actually happened, and the
+      ones you keep missing come back sooner.</p>
+
+      <h3>A session, start to finish</h3>
+      <ol>
+        <li><strong>Start</strong> from the menu bar (Session &rarr; Start Session,
+        or Numpad2). It picks the drill that is most overdue.</li>
+        <li>A <strong>briefing</strong> appears first: what the drill is, how it is
+        set up, and what counts as landing it. Start Drill begins; Cancel backs out.
+        Turn briefings off in Session if you already know the deck.</li>
+        <li>The app applies the whole Training Mode setup for you &mdash; dummy
+        behaviour, recordings, reversals, guard, counter state, positions. Every
+        setting the drill does <em>not</em> mention is reset rather than inherited,
+        so nothing bleeds over from the last drill.</li>
+        <li>Play your reps. The panels get out of the way while a session runs.</li>
+        <li>When the reps are done, a <strong>Drill Complete</strong> popup shows how
+        many landed and the grade, with <strong>Next Drill</strong>,
+        <strong>Repeat</strong> and <strong>Done</strong>.</li>
+        <li>The court is handed back: replay stopped, dummy standing, both players
+        centred. Turn that off in Session &rarr; <strong>Reset Court When Done</strong>
+        if you would rather keep practising the same setup by hand.</li>
+      </ol>
+
+      <h3>Grades and scheduling</h3>
+      <p>Each session ends in one of four grades, exactly like Anki: <strong>Again</strong>,
+      <strong>Hard</strong>, <strong>Good</strong>, <strong>Easy</strong>. Better grades
+      push the next review further out; Again brings it back tomorrow and resets the
+      streak. You never pick the grade &mdash; it comes from what the app observed.</p>
+
+      <h3>Choosing what is in rotation</h3>
+      <p>Every drill has a tick box, in-game and on the Drills page. The rule is worth
+      knowing because it is not obvious:</p>
+      <ul>
+        <li><strong>Nothing ticked</strong> &mdash; every due drill is in rotation.</li>
+        <li><strong>Anything ticked</strong> &mdash; only the ticked ones run.</li>
+      </ul>
+      <p>The in-game list says which of the two you are in, above the list.</p>
+
+      <h3>Difficulty</h3>
+      <p>Every drill can carry a difficulty &mdash; <code>very-easy</code>,
+      <code>easy</code>, <code>medium</code>, <code>hard</code>,
+      <code>very-hard</code> &mdash; and automatic selection uses it. There is no
+      point being handed a frame-perfect corner route on day one.</p>
+      <ul>
+        <li>The two easiest levels are <strong>always open</strong>.</li>
+        <li>Each next level opens once <strong>two drills one level down</strong>
+        reach a streak of two. It reuses the streak scheduling already keeps, rather
+        than a second score to grind.</li>
+        <li>Levels open <strong>in order</strong>, so one lucky hard drill cannot
+        unlock very-hard.</li>
+        <li>A drill with <strong>no</strong> difficulty is never gated. Unknown is not
+        the same as hard.</li>
+      </ul>
+      <p>This only affects what the app <em>picks for you</em>. Choosing a drill
+      yourself always works &mdash; nothing is locked away from someone who
+      deliberately goes and gets it.</p>
+
+      <h3>Finding a drill</h3>
+      <p>The library is large &mdash; over two thousand drills once the SuperCombo
+      import landed &mdash; so the Drills page has a real search box rather than a
+      filter. It searches everything, not just what is on screen. Terms are ANDed:
+      every one has to hold.</p>
+      <table class="help-table">
+        <thead><tr><th>Type this</th><th>To get</th></tr></thead>
+        <tbody>
+          <tr><td><code>luke</code></td><td>Text in the name, description, combo or id</td></tr>
+          <tr><td><code>"drive rush"</code></td><td>A phrase, spaces and all</td></tr>
+          <tr><td><code>-corner</code></td><td>Everything that does <strong>not</strong> match</td></tr>
+          <tr><td><code>character:jp</code></td><td>A field. Also <code>dummy:</code>, <code>difficulty:</code>, <code>combo:</code>, <code>trains:</code>, <code>trains-for:</code>, <code>position:</code>, <code>name:</code>, <code>id:</code>, <code>desc:</code></td></tr>
+          <tr><td><code>difficulty:&lt;=medium</code></td><td>Difficulty is ordered, so it compares</td></tr>
+          <tr><td><code>-difficulty:very-hard</code></td><td>Any field can be negated</td></tr>
+          <tr><td><code>selected:yes</code> <code>favorite:yes</code> <code>due:yes</code></td><td>Flags</td></tr>
+          <tr><td><code>corner -character:jp</code></td><td>Combine freely</td></tr>
+        </tbody>
+      </table>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/drills-page.png') }}" alt="The Drills page: search box, filter dropdowns and the drill grid" loading="lazy">
+        <figcaption>The Drills page. The count on the right is what your query matched
+        out of the whole library, not what happens to be on screen.</figcaption>
+      </figure>
+
+      <p>The <strong>Type</strong>, <strong>Character</strong> and <strong>Dummy</strong>
+      dropdowns are the same thing in a friendlier shape &mdash; picking one adds a term
+      to this query, so they stack with whatever you have typed and with each other.
+      <em>Any/Unset</em> finds drills where the field is empty.</p>
+
+      <p>The <strong>in-game</strong> Drills menu has a simpler box: a plain substring
+      over the name and id. It is there to reach a drill you can already name, not to
+      run the full query language twice in two languages.</p>
+
+      {% if scrimmage_available %}
+      <h3>Scrimmage</h3>
+      <p>Three matches against the CPU, graded on your tally rather than on wins.
+      Win all three and the difficulty goes up next time. It watches HP to work out
+      who won each match, and the Won/Lost buttons override that if it gets it wrong.
+      Afterwards it recommends drills based on what actually went badly &mdash; a
+      drill can declare what it <code>trains:</code>, and the weakest categories pull
+      those drills up the queue.</p>
+      {% endif %}
+
+      <h3>Favorites</h3>
+      <p>The star on a drill card marks it a <strong>favorite</strong>. Favorites sort
+      to the <strong>front of the Drills page</strong> &mdash; across the whole library,
+      not just whatever page you are on &mdash; and <code>favorite:yes</code> finds them
+      in search.</p>
+      <p>Favorites are also something you can <strong>train under</strong>: starting a
+      session with <em>Favorites</em> runs only drills you have starred. They still have
+      to be due &mdash; a favorite is a shortlist, not a way around scheduling.</p>
+      <p>This is not the same thing as <strong>selection</strong>, and the two work
+      together rather than replacing each other:</p>
+      <table class="help-table">
+        <thead><tr><th></th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Selected</strong></td><td>What is in rotation <em>right now</em>. Select nothing and everything runs.</td></tr>
+          <tr><td><strong>Favorite</strong></td><td>A lasting shortlist you curate. It only narrows the deck when you deliberately start a Favorites session.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Drills with no character</h3>
+      <p>Most drills name a character. Some do not &mdash; anti-airs, parries,
+      hit-confirms, throw tech. Those are <strong>fundamentals</strong>, and they are
+      scheduled <strong>separately for every character you play</strong>.</p>
+      <p>Being able to anti-air as JP says nothing about whether you can anti-air as
+      Ryu, so drilling one does not tick the other off. A fundamental you have never
+      practised as the character you are currently playing counts as <em>new</em>, and
+      comes up straight away &mdash; however well another character knows it.</p>
+      <p>The Drills page reads the same way: while the game is running, badges answer
+      for the character actually loaded. With the game closed there is nobody to answer
+      for, so it falls back to a combined view.</p>
+
+      <h3>Where the drills came from</h3>
+      <p>Most of the library is imported from the <strong>SuperCombo wiki</strong>:
+      around two thousand combos across all thirty characters, with each combo's
+      position, damage, difficulty and notes carried across. Frame data for every
+      character is imported alongside it.</p>
+      <p>Imported drills arrive <strong>unticked</strong> on purpose. Your own picks
+      keep driving rotation until you deliberately add some &mdash; two thousand
+      strangers should not take over your practice.</p>
+      <p>Not every wiki combo could be translated exactly. Where the notation says
+      something the app cannot state precisely, the combo is <em>skipped</em> rather
+      than approximated: a success rule that is subtly wrong grades Again forever and
+      looks exactly like a broken detector.</p>
+
+      <h3>When a drill cannot score</h3>
+      <p>Two warnings appear in the panel during a session, and both mean the failure
+      is not yours:</p>
+      <ul>
+        <li><strong>"no success criteria"</strong> &mdash; the drill has no rule for
+        what counts, so every rep grades Again no matter how it is played. Fix it on
+        the Drills page.</li>
+        <li><strong>"empty recording slot(s) for this dummy"</strong> &mdash; the drill
+        points at a recording slot that has nothing in it for the character you are
+        fighting, so the dummy will just stand there. Recordings are per character.</li>
+        <li><strong>"no checker for: &hellip;"</strong> &mdash; the drill asks for a
+        success category nothing knows how to grade. Same effect as having none, but
+        the cause is a name rather than a blank.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel panel-cyan" id="wongscript">
+    <div class="panel-head"><h2>WongScript</h2></div>
+    <div class="help-body">
+      <p>WongScript (<code>.wong</code>) is a plain-text way to write drills, one line
+      per setting. It compiles down to the exact same thing the drill form saves --
+      it's an additional way to edit, not a replacement. Only what you write overrides
+      the defaults; anything you leave out just isn't set.</p>
+
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/wongscript-tab.png') }}" alt="The WongScript tab inside the New/Edit Drill modal" loading="lazy">
+        <figcaption>The WongScript tab. Save parses whatever is in the textarea and commits it directly -- there is no separate parse step.</figcaption>
+      </figure>
+
+      <h3>A full example</h3>
+      <pre class="mono help-example">title: CH VS DELAYED THROW TECH
+description: "Counter on dummy throwing, throw on dummy doing nothing"
+position: dummy-corner-right
+block: block-after-first-hit
+dummy: ryu
+reps: 10
+game-speed: 5
+response-window: 20
+
+wake-up-rev-slot: 0
+action: type=common skill=normal-throw, 4f
+success: counter-hit, punish-counter-hit
+
+wake-up-rev-slot: 1
+action: type=common skill=do-nothing, 0f
+success: throw
+
+fixed-success: throw, counter-hit, punish-counter-hit</pre>
+
+      <h3>Two different ways to set what the dummy does</h3>
+      <p>SF6 has two separate systems for controlling the dummy, and WongScript
+      configures them differently:</p>
+      <ul>
+        <li><strong>Reversal Options</strong> -- one of the dummy's built-in
+        normals/specials/supers/common actions, picked from a menu. WongScript
+        configures this directly: the <code>action:</code> line underneath the slot
+        IS what the dummy does (<code>type=</code> + <code>skill=</code> + delay).
+        This is what the example above uses. SF6's own Reversal Settings screen
+        splits this into <strong>three separate 10-slot tabs</strong>, each firing
+        at a different moment, and WongScript has a matching key for each:
+          <ul>
+            <li><code>wake-up-rev-slot:</code> -- fires as the dummy gets up from a knockdown.</li>
+            <li><code>block-rev-slot:</code> -- fires right after the dummy blocks an attack.</li>
+            <li><code>damage-rev-slot:</code> -- fires right after the dummy gets hit.</li>
+          </ul>
+        A drill only needs whichever of the three actually matches what it's
+        practicing -- most drills use just one.</li>
+        <li><strong>Recording slots</strong> (<code>rec-slot:</code>) -- an actual
+        custom input recording (any sequence of buttons, not limited to the Reversal
+        menu's options), a completely separate SF6 system from Reversal Options.
+        There are two ways to get real content into one: record the dummy's action
+        by hand in Training Mode, then use <strong>Save/Override Current Setup as
+        Drill</strong> (in-game or the dashboard) to capture that exact recording
+        INTO the drill's own saved data -- from then on, starting the drill
+        automatically writes the recording into the slot and starts it playing, no
+        dependency on that slot still holding the right content in Training Mode
+        later. OR write it directly in WongScript with <code>action:</code> (same
+        keyword Reversal slots use, since it's the same underlying idea -- "what
+        does the dummy do" -- just meaning real FGC motion notation here instead of
+        a built-in move; see the next section), no Training Mode step needed at all
+        for a simple input. The <code>rec-slot:</code> line just activates whichever
+        slot (and its content, from either source) -- if the slot has neither a live
+        Training Mode recording, an embedded one, nor an <code>action:</code> line,
+        the drill reports an unrecorded-slot warning rather than silently doing
+        nothing. Two more things are configurable per
+        drill, matching Recording Settings' own Replay screen exactly:
+        <code>weight:</code> (Random Selection Rate -- when several slots are active
+        at once, higher weight means the game picks that one more often) and the
+        drill-wide <code>repeat-replay:</code> (Off/On/Always Repeat Playback).</li>
+      </ul>
+      <p class="hint">Telling these apart in an Anki card comes down to the source
+      wording: "reversal options -&gt; slot N" means the Reversal Options system
+      (use <code>wake-up-rev-slot:</code>/<code>block-rev-slot:</code>/
+      <code>damage-rev-slot:</code> + <code>action: type=...</code>); "rec -&gt;
+      slot N" means an actual recording (use <code>rec-slot:</code> + optionally
+      <code>action: &lt;motion notation&gt;</code>, a different meaning of the same
+      keyword -- see below). Most real drills so far turned out to be Reversal
+      Options, even ones that looked at first glance like they needed a custom
+      recording.</p>
+      <pre class="mono help-example">title: Example Recorded Meaty
+position: player-corner-left
+reps: 10
+repeat-replay: always
+
+rec-slot: 0
+action: 236HP, [6:10f], 22LK, [4:4f]
+weight: 1
+success: perfect-parry</pre>
+      <p class="hint">If a slot's <code>action:</code> line is left out, that slot
+      must already have a real recording saved to it in Training Mode or already
+      have one embedded on the drill from a previous capture -- <code>rec-slot:</code>/
+      <code>weight:</code> alone never create content, only <code>action:</code>
+      does.</p>
+
+      <h3>Recorded-pattern notation</h3>
+      <p>The dummy's actual input for a Recording slot, written the same way SF6's
+      own combo notation already writes a quick motion input (<code>236P</code>,
+      <code>623P</code>) -- with one addition: a bracket form for anything that
+      needs an explicit, longer duration (a charge hold in particular), since real
+      notation never states literal frame counts and this has to.</p>
+      <ul>
+        <li><strong>Plain step</strong> -- a direction (numpad 1-9, 5/<code>N</code>
+        for neutral) or a button (<code>LP</code>/<code>MP</code>/<code>HP</code>/
+        <code>LK</code>/<code>MK</code>/<code>HK</code>), holds for a fixed 2 frames
+        -- the same quick-input timing a real motion like <code>236HP</code> already
+        implies. Chain several together with no space to write a real motion:
+        <code>236HP</code> = down, down-forward, then forward+HP pressed TOGETHER
+        (the LAST direction of any motion always merges with the button right after
+        it, no <code>+</code> needed -- real players press the final direction and
+        the button at the same moment, not one after the other; only earlier
+        directions in the motion, like the <code>2</code>/<code>3</code> here, stay
+        their own separate steps). A bare button with no digits (e.g. just
+        <code>HP</code>) is a neutral button press.</li>
+        <li><strong>Held step</strong> -- <code>[&lt;code&gt;:&lt;n&gt;f]</code>,
+        e.g. <code>[6:10f]</code> (hold forward 10 frames) or <code>[2:5f]</code>
+        (hold down 5 frames, the charge case) -- matches the notation guide's own
+        <code>[X]</code> "hold the input" convention, just with the frame count our
+        own tools need that real notation doesn't track. A charge special composes
+        with the merge rule above for free: <code>[2:5f]8HK</code> = charge down 5
+        frames, then up+HK pressed together as the release.</li>
+        <li><strong>Simultaneous</strong> -- join codes with <code>+</code> inside
+        either form: <code>HP+HK</code> (Drive Impact, both buttons at once, quick)
+        or <code>[6+HP:8f]</code> (hold forward+HP together for 8 frames). Two or
+        more buttons run together with no <code>+</code> at all (<code>HPHK</code>)
+        also count as simultaneous -- it reads the same as <code>HP+HK</code>, just
+        more compact for Drive Impact/Drive Rush. A direction immediately followed
+        by a button, bare, ALSO always means simultaneous now (see Plain step
+        above) -- the only way to keep a direction and a following button
+        genuinely SEQUENTIAL (two separate presses, not one) is to bracket-hold one
+        of them, e.g. <code>[6:2f]HP</code>.</li>
+        <li><strong>Dash / quick reversal</strong> -- a direction pressed twice in a
+        row (or through its exact opposite) auto-inserts a real, invisible release
+        between the two presses so it registers as two taps instead of one
+        continuous direction: <code>66</code> (forward dash), <code>44</code>
+        (backdash), <code>46</code>, <code>28</code>, or either diagonal opposite.
+        This applies whether either side is written bare or bracket-held --
+        <code>[6:2f][6:2f]</code> gets the same release as <code>66</code>, since
+        the underlying issue (SF6's input buffer blending two direction presses
+        with no real gap between them) doesn't care how the notation was spelled,
+        only whether real release frames actually separate the two presses. No
+        special syntax needed for Drive Rush either -- it's just this plus the
+        simultaneous rule above composed together: <code>66LPLK</code> at the start
+        of a combo, or bare <code>LPLK</code> mid-combo with no dash needed. There
+        are no exceptions -- a charge release counts too, so
+        <code>[2:45f]8HK</code> reads as "down 45f, neutral, then up+HK together."</li>
+      </ul>
+      <p class="hint"><strong>Commas mark a real boundary, not just readability.</strong>
+      A comma splits the line into separate tokens, and an automatic ~0.1s neutral
+      gap gets inserted between two tokens that are BOTH real moves -- found the hard
+      way: writing a forward hold straight into a quarter-circle motion with no
+      break (<code>[6:20f]236HP</code>, no comma) made the dummy do a completely
+      different special move, because SF6's own input reader looks across the whole
+      recent input stream, and the tail end of the hold plus the start of the motion
+      accidentally spelled out a different real motion. Splitting them with a comma
+      (<code>[6:20f], 236HP</code>) inserts a real invisible neutral gap between them
+      so each motion registers cleanly on its own. The gap is automatic and never
+      shown in the text -- you don't write it yourself. Two exceptions: nothing gets
+      inserted INSIDE one token (the steps of <code>236HP</code> still have to flow
+      together to register as that one motion), and nothing gets inserted next to a
+      token that's already a neutral pause on its own (<code>[N:12f]</code>, a bare
+      <code>N</code>, etc.) -- an explicit pause you wrote yourself already does the
+      same job, at whatever length you chose, so the tool won't stack a second gap
+      on top of it. Your OWN explicit pause always keeps its own visible comma on
+      redisplay too, for the same reason -- it's never regenerable from context the
+      way the two automatic gaps are, so it's never silently swallowed into a
+      neighboring step: <code>4, N, 6HP, N, 2, N, 8HK</code> always redisplays with
+      every comma intact, never collapsed into one unreadable run. Loading an
+      existing drill's recording as WongScript always shows every step explicitly
+      bracketed with its real frame count rather than compact motion form, since a
+      real captured recording's timing won't reliably match the notation's own
+      2-frame default -- still exact, just less compact than something typed by
+      hand.</p>
+
+      <h3>Every line, what it does</h3>
+      <table class="help-table">
+        <thead><tr><th>Line</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>title:</code></td><td>The drill's name. Required -- the only line every drill needs.</td></tr>
+          <tr><td><code>description:</code></td><td>Free text, shown on the drill card.</td></tr>
+          <tr><td><code>position:</code></td><td>One of <code>dummy-corner-right</code>, <code>dummy-corner-left</code>, <code>player-corner-left</code>, <code>player-corner-right</code>, <code>center</code>, <code>center-reversed</code>.</td></tr>
+          <tr><td><code>block:</code></td><td>One of <code>no-guard</code>, <code>block-after-first-hit</code> (default), <code>all-block</code>, <code>random-guard</code>.</td></tr>
+          <tr><td><code>character:</code></td><td>Your (the player's) character -- filters which drills show up for that character's deck. Optional.</td></tr>
+          <tr><td><code>dummy:</code></td><td>The opponent's character -- used to resolve <code>action:</code> move names below (see next section). Optional, independent of <code>character:</code>.</td></tr>
+          <tr><td><code>reps:</code></td><td>Attempts per session. Defaults to 10 if left out.</td></tr>
+          <tr><td><code>game-speed:</code></td><td>0-10 (50%-150% speed), manual override. Leave out for the automatic ramp (slow while you're still learning it, full speed once you've got a streak going).</td></tr>
+          <tr><td><code>response-window:</code></td><td>Frames of grace before a rep with no response counts as a miss. Leave out for the default.</td></tr>
+          <tr><td><code>attempts:</code></td><td><code>slot</code> (the default) counts one attempt each time the dummy's recording or reversal slot plays -- right when the dummy acts and you answer. <code>action</code> counts one each time <em>you</em> do the thing being graded, which is what a hit confirm wants: the recording loops on its own timer and says nothing about how many times you tried. Combo drills ignore this and always count combos. Leave it on <code>slot</code> if any of your success criteria is <code>do_nothing</code> -- an attempt has to be bounded by something that happens, and doing nothing correctly never fires.</td></tr>
+          <tr><td><code>wake-up-rev-slot: N</code></td><td>Opens Wake-up Reversal slot N (fires on the dummy's wake-up) -- the <code>action:</code>/<code>success:</code> lines right after it belong to this slot, until the next slot line.</td></tr>
+          <tr><td><code>block-rev-slot: N</code></td><td>Opens Block Reversal slot N (fires right after the dummy blocks). Same <code>action:</code>/<code>success:</code> pattern.</td></tr>
+          <tr><td><code>damage-rev-slot: N</code></td><td>Opens Reversal After Damage slot N (fires right after the dummy gets hit). Same <code>action:</code>/<code>success:</code> pattern.</td></tr>
+          <tr><td><code>rec-slot: N</code></td><td>Opens Recording slot N -- the <code>action:</code>/<code>weight:</code>/<code>success:</code> lines right after it belong to this slot, until the next slot line.</td></tr>
+          <tr><td><code>weight: N</code></td><td>Only inside a <code>rec-slot:</code> block. Random Selection Rate -- when multiple Recording slots are active at once, the game picks between them weighted by this value. Defaults to 1 (equal odds) if left out.</td></tr>
+          <tr><td><code>repeat-replay: off|on|always</code></td><td>Top-level, applies to every Recording slot in the drill -- matches Recording Settings' own "Repeat Replay" dropdown exactly. Leave out to keep whatever's already set.</td></tr>
+          <tr><td><code>action:</code></td><td>Meaning depends on which kind of slot is open. Inside a <code>wake-up-rev-slot:</code>/<code>block-rev-slot:</code>/<code>damage-rev-slot:</code> block: <code>type=&lt;category&gt; skill=&lt;name&gt;, &lt;n&gt;f</code> (see "Action names" below). Inside a <code>rec-slot:</code> block: the dummy's actual input, in FGC motion notation (<code>236HP</code>, <code>[6:10f]</code>, etc. -- see "Recorded-pattern notation" above). Optional for a recording slot -- leave out if it already has real content from Training Mode or a previous capture.</td></tr>
+          <tr><td><code>success:</code></td><td>What YOU need to do for that slot to count as a success. Comma-separated if any one of them counts (e.g. <code>counter-hit, punish-counter-hit</code>), or use <code>&gt;</code> to require things <em>in order</em> &mdash; <code>block &gt; hit</code> means block first, then hit. See "Success in order" below.</td></tr>
+          <tr><td><code>fixed-success:</code></td><td>A top-level override that applies every rep regardless of which slot fired -- for drills where the tool can't tell which slot fired but every outcome grades the same way either way.</td></tr>
+          <tr><td><code>combo:</code></td><td>Attack-string success for the open slot -- "land THIS move or combo", written in the same motion notation as <code>action:</code> (<code>2MK, HP, 236MP</code>). A single move just has to hit; a multi-move string has to land as a real combo. Matching is a prefix, so extra hits <em>on the end</em> are fine &mdash; nobody is ever marked down for carrying a combo further. What the named moves must do is land as an <strong>unbroken run</strong>, in order: an extra hit <em>between</em> two of them is a different combo, not a longer one, and it does not match. Where a gap is genuinely allowed, say so with <code>...</code>. <code>...</code> means "anything here": put it at the <em>start</em> to match anywhere rather than from the first hit (for combos whose opener is deliberately unspecified &mdash; "any heavy starter &gt; ..."), or in the <em>middle</em> to leave a gap &mdash; <code>HP, HP, ..., 236HP</code> requires those two, then anything, then that one.</td></tr>
+          <tr><td><code>fixed-combo:</code></td><td>The same thing as a top-level override, applied every rep regardless of which slot fired -- the <code>combo:</code> counterpart to <code>fixed-success:</code>.</td></tr>
+          <tr><td><code>health:</code> <code>drive:</code> <code>sa:</code></td><td>What each player starts every rep with. One number is <em>yours</em>; two, comma-separated, is <code>mine, theirs</code> &mdash; the same shape <code>position:</code> uses. Health is a percentage in steps of 10, Drive is 0&ndash;6, SA is 0&ndash;3. So <code>drive: 0, 6</code> is burnout practice against a full-meter opponent, and <code>sa: 3</code> gives you a Level 3 to work with. Leave one out and the game's own default applies (full health, full Drive, no Super) &mdash; and it is applied <em>every</em> session, so a burnout drill cannot leave the next drill without Drive.</td></tr>
+          <tr><td><code>health-recovery:</code> <code>drive-recovery:</code> <code>sa-recovery:</code></td><td>How each gauge <em>behaves</em> after it is set &mdash; same <code>mine, theirs</code> shape. <b>refill</b> (the default) brings the value back every rep, which is what makes a drill a drill; <b>standard</b> is match behaviour, so rep two starts wherever rep one left you; <b>fixed</b> locks the gauge and it cannot move at all. You will rarely want anything but the default: <code>health-recovery: standard</code> is for a drill you intend to be able to lose.</td></tr>
+          <tr><td><code>cpu-level:</code></td><td>Lv 1&ndash;8, for a drill whose dummy is set to CPU.</td></tr>
+          <tr><td><code>counter:</code></td><td>One of <code>standard</code> (default), <code>counter</code>, <code>punish-counter</code>, <code>random</code>. Puts the dummy permanently in that counter-hit state, which is how a punish-counter combo gets practised without needing a recording for it.</td></tr>
+          <tr><td><code>require-slot:</code></td><td><code>yes</code> (default) or <code>no</code>. <code>no</code> means the drill's Recording slots are <em>ambient</em> -- the dummy is doing something so you're not hitting a statue, but which slot fired has nothing to do with success. Grading then comes purely from <code>fixed-combo:</code>/<code>fixed-success:</code>.</td></tr>
+          <tr><td><code>trains:</code></td><td>Comma-separated list of the <em>Against me</em> tally categories this drill is a fix for (e.g. <code>trains: got_thrown, got_hit</code>).{% if scrimmage_available %} Scrimmage ranks what keeps happening to you and recommends the drills that claim it.{% endif %} Optional; unknown category names are rejected rather than silently ignored.</td></tr>
+          <tr><td><code>trains-for:</code></td><td>The other half, from the <em>What I did</em> tally: the skill this drill <em>builds</em>, rather than the mistake it stops (e.g. <code>trains-for: hit_confirm</code>). Its own vocabulary, so a receiver category like <code>got_thrown</code> is rejected here &mdash; a drill cannot train <em>for</em> being thrown. Optional, and a drill may have both, one or neither.</td></tr>
+          <tr><td><code>difficulty:</code></td><td>One of <code>very-easy</code>, <code>easy</code>, <code>medium</code>, <code>hard</code>, <code>very-hard</code>. Gates automatic selection, so a beginner is not handed a frame-perfect route (see <a href="#practising">Difficulty</a>). Optional &mdash; a drill without one is never gated, because unknown is not the same as hard.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What you can put after <code>success:</code></h3>
+      <p>Every value the grader understands. A slot can name more than one,
+         comma-separated, and any of them counts.</p>
+      <table class="help-table">
+        <tr><th>Criterion</th><th>Counts as a success when&hellip;</th></tr>
+        <tr><td><code>anti-air</code></td><td>You hit them while they were airborne. Being airborne has to come first &mdash; a hit before the jump does not count.</td></tr>
+        <tr><td><code>throw</code></td><td>Your throw connected. A real throw, checked on the same frame from both sides, not merely "they took damage".</td></tr>
+        <tr><td><code>throw-tech</code></td><td>You teched their throw. Getting thrown is the failure.</td></tr>
+        <tr><td><code>block</code></td><td>You blocked their attack.</td></tr>
+        <tr><td><code>block-then-punish</code></td><td>You blocked <em>and then</em> punished. In that order &mdash; a hit that came first is not a punish.</td></tr>
+        <tr><td><code>counter-hit</code></td><td>The hit landed as a Counter Hit &mdash; the game's own flag, the one that prints on screen.</td></tr>
+        <tr><td><code>punish-counter-hit</code></td><td>The hit landed as a Punish Counter.</td></tr>
+        <tr><td><code>perfect-parry</code></td><td>You Perfect Parried. A regular parry does not count. Taking damage does not fail it, because these drills usually need you knocked down first.</td></tr>
+        <tr><td><code>reversal</code></td><td>You acted on the first frame you were able to &mdash; the REVERSAL the game prints beside COUNTER. Same rule about damage: getting knocked down is how the drill starts.</td></tr>
+        <tr><td><code>drive-impact</code></td><td>Your Drive Impact landed.</td></tr>
+        <tr><td><code>stuff-dash</code></td><td>You hit them out of a dash &mdash; the hit has to interrupt the dash, not merely happen nearby.</td></tr>
+        <tr><td><code>stuff-drive-rush</code></td><td>You hit them out of a Drive Rush, as a Counter or Punish Counter.</td></tr>
+        <tr><td><code>drive-impact-counter</code></td><td>You beat their Drive Impact &mdash; hit them while it was still coming out.</td></tr>
+        <tr><td><code>drive-impact-vs-di</code></td><td>Both of you Drive Impacted and yours won the clash.</td></tr>
+        <tr><td><code>hit-confirm</code></td><td>The opening hit landed and more hits followed &mdash; exactly <code>hit &gt; combo</code>. The opener alone is not a confirm: it goes out before you know the answer, so what is being measured is the decision after it. Getting hit mid-combo does not fail it. If you also want to reward keeping your turn on block, add <code>pressure</code> beside it.</td></tr>
+        <tr><td><code>pressure</code></td><td>They blocked something of yours and you landed the next one &mdash; <code>got-blocked &gt; hit</code>. Keeping your turn, rather than confirming a hit.</td></tr>
+        <tr><td><code>do-nothing</code></td><td>You correctly declined to press. Note this one cannot be used with <code>attempts: action</code> &mdash; an attempt has to be bounded by something that happens.</td></tr>
+      </table>
+
+      <h3>Success in order</h3>
+      <p>A comma means <em>any of these</em>. A <code>&gt;</code> means
+         <em>this, and then that</em> &mdash; the order you have to do them
+         in for the rep to count.</p>
+      <pre>success: block &gt; hit          block first, THEN hit them
+success: hit &gt; combo          the hit landed, THEN more hits followed
+success: block &gt; hit &gt; combo  as many steps as you like
+success: hit &gt; combo, block &gt; hit    either sequence counts</pre>
+      <p>Order is not guessed after the fact. The mod records the moment
+         each thing first became true during the rep, so
+         <code>block &gt; hit</code> genuinely means the block came first
+         &mdash; a rep where you hit them and then blocked is not a punish,
+         and is scored as a miss.</p>
+      <p>The pieces you can chain, named from <em>your</em> point of view:</p>
+      <p><strong>What you did:</strong> <code>hit</code>, <code>combo</code>,
+         <code>attack</code>, <code>block</code>, <code>parry</code>,
+         <code>perfect-parry</code>, <code>throw</code>,
+         <code>throw-tech</code>, <code>counter-hit</code>,
+         <code>punish-counter</code> (also spelled
+         <code>punish-counter-hit</code>), <code>anti-air</code>,
+         <code>reversal</code>, <code>backroll</code>, <code>wakeup</code>,
+         <code>drive-impact</code>, <code>drive-impact-counter</code>,
+         <code>drive-impact-vs-di</code>, <code>stuff-dash</code>,
+         <code>stuff-drive-rush</code>.<br>
+         <strong>What they did to you:</strong> <code>got-hit</code>,
+         <code>got-blocked</code>, <code>got-thrown</code>,
+         <code>got-counter-hit</code>, <code>got-punish-countered</code>,
+         <code>got-drive-impacted</code>, <code>got-anti-aired</code>.</p>
+      <p>Every criterion in the table above can be chained this way except
+         <code>do-nothing</code>, and that one for a reason rather than an
+         oversight: a sequence asks <em>when</em> each step happened, and
+         nothing happening has no moment.</p>
+      <p>What you <em>cannot</em> chain is a move. <code>punish-counter-hit
+         &gt; DR &gt; ...</code> reads naturally but asks something
+         different &mdash; these are outcomes (what happened to whom), not
+         the buttons you pressed. Which moves you threw is what the combo
+         notation matches, in the <code>combo:</code> field.</p>
+      <p>Some of the named criteria in the table above are just shorthand
+         for one of these sequences, and the two spellings are
+         interchangeable &mdash; write whichever reads better to you:</p>
+      <pre>hit-confirm        =  hit &gt; combo
+pressure           =  got-blocked &gt; hit
+block-then-punish  =  block &gt; hit</pre>
+
+
+
+      <h3>Test drills</h3>
+      <p>A drill whose id starts with <code>debug_</code> is a
+         <strong>test drill</strong>: it exists to exercise a detector,
+         not to teach anything. Name one <code>debug_ something</code>
+         and it becomes one. Find them by typing <code>debug_</code> in
+         the drill search.</p>
+      <p>They behave differently in exactly two ways, and both are the
+         point. They are <b>never offered automatically</b> &mdash; they
+         cannot turn up in a session or count toward a streak &mdash; and
+         they are <b>never shipped</b>, so nobody installs somebody
+         else's test rig. Picking one by hand still runs it normally,
+         which is what they are for.</p>
+      <p>The <em>id</em> is what decides, not the name, and that is
+         deliberate: an id is set once when the drill is created and no
+         edit touches it, so a test drill cannot be renamed into a real
+         one that would then be scheduled and shipped. Each one's
+         description should say what to watch <em>and what a failure
+         would look like</em>, since the whole reason a test drill exists
+         is that the thing it checks cannot be confirmed by reading the
+         code.</p>
+
+      <h3>Action names -- "type" and "skill"</h3>
+      <p>Every Wake-up Reversal option belongs to one of 5 categories
+      (<code>type=</code>), and within that category it's the Nth move in that
+      category's own list (<code>skill=</code>). These were confirmed directly from
+      the game's own reflection data and from the real in-game Reversal Options menu
+      -- not guessed.</p>
+      <ul>
+        <li><code>type=common</code> -- the one truly universal list, every character shares it: <code>do-nothing</code>, <code>forward</code>, <code>backward</code>, <code>forward-dash</code>, <code>back-dash</code>, <code>vertical-jump</code>, <code>forward-jump</code>, <code>backward-jump</code>, <code>normal-throw</code>, <code>drive-parry</code>, <code>drive-impact</code>.</li>
+        <li><code>type=normal</code>, <code>type=command-normal</code>, <code>type=special</code>, <code>type=sa</code> -- these are ALL character-specific (even <code>normal</code> -- every character has the same 12 basic normals conceptually, but the list is still captured and stored per-character, not shared), and only resolve to a real name if that character's move list has been captured yet (only Ryu's is captured so far). Set <code>dummy:</code> to the opponent's character to use these. If a name isn't recognized, WongScript will tell you which line is the problem rather than silently guessing wrong.</li>
+      </ul>
+      <p>If a character's list hasn't been captured yet, you can still write the raw
+      numbers directly -- <code>action: type=special skill=2, 0f</code> -- and fix it
+      up later once that character's moves get captured. The dashboard's Form tab
+      does the same thing automatically: pick a Type in a slot's "Dummy's action"
+      section and its Skill dropdown fills in with real names once a <code>dummy:</code>
+      character with a captured list is selected above; without one (or for an
+      uncaptured character) it falls back to a plain skill-index number field.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="dashboard-tools">
+    <div class="panel-head"><h2>Dashboard tools</h2></div>
+    <div class="help-body">
+      <h3>Creating and editing a drill</h3>
+      <p>Click <strong>+ New Drill</strong> (or <strong>Edit</strong> on an existing
+      one) to open the modal. It has two tabs that both save the same way:</p>
+      <ul>
+        <li><strong>Form</strong> -- the original point-and-click editor: name,
+        description, position/block dropdowns, character/dummy dropdowns, per-slot
+        chip-based success criteria.</li>
+        <li><strong>WongScript</strong> -- editing an existing drill loads its
+        current settings as a script automatically the first time you open this tab
+        (switching back and forth afterward won't re-load it and clobber what you're
+        typing); a brand-new drill starts with an empty script, ready to write from
+        scratch. Just write/edit the text and click Save -- it parses whatever's in
+        the box directly, no separate "fill the form first" step. Errors show
+        inline, with the line number.</li>
+      </ul>
+      <p>Either tab, the actual <strong>Save</strong> button at the bottom is what
+      commits it -- on the WongScript tab, Save parses the current text first and
+      aborts (showing the real error) if it doesn't parse, rather than silently
+      saving whatever the Form tab happened to hold before.</p>
+
+      <h4>Use both: build it in the Form, then sharpen it in WongScript</h4>
+      <p>This is how Beast Drills is actually built and how its author works.
+         Jason: <em>"I start the drill in the form, and then add more advanced
+         scripts after it is built from the form. Stops me from having to write
+         a whole script out."</em></p>
+      <ol>
+        <li>Make the drill in the <strong>Form</strong> &mdash; name, characters,
+            position, slots, the obvious success criteria. Everything you would
+            otherwise be typing out by hand.</li>
+        <li>Switch to the <strong>WongScript</strong> tab. Your drill is already
+            there, written out from what you just built &mdash; no save needed
+            first, and it works on a brand-new drill you have never saved.</li>
+        <li>Add the things the form has no widget for &mdash; an ordered
+            <code>success: block &gt; hit</code>, a recorded
+            <code>action:</code> pattern, a <code>combo:</code> string.</li>
+        <li>Click <strong>Save</strong>.</li>
+      </ol>
+      <p>Switching tabs carries your work across in both directions, and it is
+         only ever held in the page &mdash; <strong>nothing is written until you
+         press Save</strong>, and <strong>Cancel throws all of it away</strong>,
+         however many times you went back and forth.</p>
+      <p>Going back to the Form does not reformat script you wrote by hand. The
+         text is only regenerated from the form when you have actually changed
+         something in the form, so you can look at the Form tab and come back
+         without losing your own spacing and wording.</p>
+      <p>The Form is the easy way in; WongScript is where the advanced settings
+         live. Neither is the "real" one, and you never have to choose &mdash;
+         they are two views of the same drill.</p>
+
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/character-dummy-fields.png') }}" alt="The Character (player) and Dummy (opponent) dropdowns in the Form tab" loading="lazy">
+        <figcaption>Character (player) and Dummy (opponent) are independent. Character filters which deck a drill appears in; Dummy only resolves friendly move names.</figcaption>
+      </figure>
+
+      <h3>Sharing a whole deck</h3>
+      <p>On the Drills page:</p>
+      <ul>
+        <li><strong>Export All (.wong)</strong> downloads every drill in your database
+        as one text file -- send that file to a friend.</li>
+        <li><strong>Import .wong</strong> reads a deck back in -- choose the file, or
+        paste its contents. Each drill starts its own <code>title:</code> line, so one
+        file can hold a whole deck. If some drills in the file have mistakes, the rest
+        still import -- you'll get a summary of what succeeded and what to fix.</li>
+      </ul>
+
+      <p>Import asks what to do about drills you <em>already have</em>, matched by name:</p>
+      <ul>
+        <li><strong>Add only what is new</strong> leaves those completely alone. This is
+        the default, and it is the one to use for a pack from a friend when you have
+        drills of your own you don't want touched.</li>
+        <li><strong>Replace them with this file's versions</strong> overwrites the drill
+        -- its setup, criteria and combo -- with what the file says.</li>
+      </ul>
+      <p><strong>Your progress is safe either way.</strong> Streaks, due dates, favourites
+      and per-character records belong to you rather than to the file, so an import never
+      resets them, even when it replaces a drill outright.</p>
+
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/export-import.png') }}" alt="The Export All and Import buttons on the Drills page" loading="lazy">
+        <figcaption>The Drills toolbar. Export All writes every drill to one <code>.wong</code> file; the filters below narrow the grid by type, player character and dummy.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="panel panel-magenta" id="in-game">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_profile.png')">
+      <h2>In-game</h2>
+    </div>
+    <div class="help-body">
+      <h3>The menu bar</h3>
+      <p>Everything lives on a bar across the top of the screen. It hides itself until
+      you <strong>move the mouse to the very top</strong>, and <strong>F1</strong>
+      keeps it up permanently. It stays visible while one of its menus is open, so you
+      can reach down into a dropdown without it vanishing.</p>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/menu-bar.png') }}" alt="The Beast Drills menu bar across the top of the screen" loading="lazy">
+        <figcaption>The whole interface is this bar. While a session is running the rep count appears at the right-hand end.</figcaption>
+      </figure>
+      <table class="help-table">
+        <thead><tr><th>Menu</th><th>What is in it</th></tr></thead>
+        <tbody>
+          <tr><td>File</td><td>Things that produce data: name and save the current Training
+          Mode setup as a new drill, update character data, reset the deck (dev)</td></tr>
+          <tr><td>Drills</td><td><strong>The whole drill list</strong>, and everything that
+          starts one. <em>Start Session</em> runs the drill you have selected, or the next one
+          due when you have not selected any; then Start Favorites, Stop Session, a filter box,
+          refresh, show all characters, clear selection, and any warning about the running
+          drill</td></tr>
+          <tr><td>Tally</td><td>Start/stop, reset, the safety gate, and every counter. Also
+          available as a panel &mdash; View &rarr; Tally</td></tr>
+          {% if scrimmage_available %}<tr><td>Scrimmage</td><td>Start, auto-detect toggle, and while one is running the score and Won/Lost/Cancel</td></tr>{% endif %}
+          <tr><td>Options</td><td>Settings, as opposed to actions: <strong>Show Briefings</strong>,
+          <strong>Reset Court When Done</strong>, draw the mouse cursor, and saving or resetting
+          the window layout</td></tr>
+          <tr><td>View</td><td>Show or hide each panel, and show/hide all of them at once</td></tr>
+          <tr><td>Help</td><td>The dashboard address and a button to open it, and every hotkey</td></tr>
+        </tbody>
+      </table>
+
+      <h3>The panels</h3>
+      <p>The drill list used to be a panel of its own. It is not any more &mdash; it
+      lives in the <strong>Drills menu</strong>, because a floating window holding a
+      list and a start button is a window for the sake of being one. Tick a drill to
+      put it in rotation, click to select it, <strong>double-click to start it</strong>,
+      and type in the filter box to narrow a long list.</p>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/drills-menu.png') }}" alt="The Drills menu open, showing ticked drills with their due dates" loading="lazy">
+        <figcaption>The Drills menu. The count reads <em>7 of 115</em> rather than 7 of
+        two thousand because Show All Characters is off, so the list is narrowed to the
+        matchup you are actually in. A tick means in rotation; the date under each drill
+        is when it next comes up.</figcaption>
+      </figure>
+      <ul>
+        <li><strong>Tally</strong> &mdash; every counter, side by side with its opposite.
+        Available as a panel <em>and</em> as a menu: the menu is for checking between
+        rounds, the panel for watching counts move while you play.</li>
+        <li><strong>Drills</strong> &mdash; the drill list, as a panel rather than a
+        menu, for leaving open while you work through a session. <strong>Numpad5</strong>.</li>
+        {% if scrimmage_available %}<li><strong>Scrimmage</strong> &mdash; the running score and the Won/Lost
+        buttons. <strong>Numpad6</strong>.</li>{% endif %}
+      </ul>
+      <p>Two more appear only when they have something to say: the
+      <strong>briefing</strong> before a drill, and <strong>Drill Complete</strong>
+      after one. <strong>While a session is running the panels hide themselves</strong>,
+      and the rep count moves to the right-hand end of the menu bar, which is always
+      up.</p>
+
+      <h3>Criteria Tally</h3>
+      <p>A free-play counter that runs with or without a drill, split into
+      <strong>In my favour</strong> and <strong>Against me</strong> &mdash; good and bad
+      outcomes for you, rather than who performed the action. Your own whiffed throw
+      counts against you the same as getting hit does. Both sides are tracked left and
+      right so you can see which side you are weaker on. Read it in the Tally menu, or open the panel and watch it move.</p>
+      <p>Each row pairs a counter with its opposite &mdash; <code>parry</code> beside
+      <code>got_parried</code>, <code>hit</code> beside <code>got_hit</code> &mdash;
+      because the comparison is the point. A few have no opposite and sit alone:
+      <code>whiff</code>, <code>block_miss</code>, <code>parry_miss</code> and
+      <code>parry_whiff</code> are all your own mistakes with no offensive twin.</p>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/tally-panel.png') }}" alt="The Tally panel, counters paired with their opposites in two columns" loading="lazy">
+        <figcaption><strong>It does not count until you press Start.</strong> The header
+        says which side is latched; "not latched" means nothing is being recorded yet.
+        A tally that reads all zeros is far more often a Start that never got pressed
+        than a detector that is broken.</figcaption>
+      </figure>
+      <p>Worth knowing what some of the less obvious ones mean:</p>
+      <table class="help-table">
+        <thead><tr><th>Counter</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><code>hit_confirm</code></td><td>A combo that <em>did damage</em></td></tr>
+          <tr><td><code>non_hit_confirm</code></td><td>The same string, <em>blocked</em> &mdash; you committed and it did not land</td></tr>
+          <tr><td><code>hit_high</code> / <code>_mid</code> / <code>_low</code></td><td>Which height <em>you</em> land at. All mid means you are not opening anyone up</td></tr>
+          <tr><td><code>parry_miss</code></td><td>You got hit by a strike &mdash; a parry you never attempted</td></tr>
+          <tr><td><code>parry_whiff</code></td><td>You pressed parry and caught nothing &mdash; the opposite mistake</td></tr>
+          <tr><td><code>throw_whiff</code></td><td><em>You</em> missed a throw</td></tr>
+          <tr><td><code>throw_missed_me</code></td><td><em>They</em> missed you with one</td></tr>
+        </tbody>
+      </table>
+      <p>Hit zones are recorded separately and <strong>always</strong>, whether the
+      tally is running or not &mdash; that is the lifetime heat map on the dashboard,
+      and it does not need switching on.</p>
+
+      <h3>Hotkeys</h3>
+      <table class="help-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>F1</td><td>Keep the menu bar up (it auto-hides otherwise)</td></tr>
+          <tr><td>Numpad1</td><td>Show / hide the panels</td></tr>
+          <tr><td>Numpad2</td><td>Start / stop a session &mdash; starts the selected drill if one is picked, otherwise the due pick</td></tr>
+          <tr><td>Numpad3</td><td>Start / stop the tally</td></tr>
+          <tr><td>Numpad4</td><td>Reset the tally</td></tr>
+          <tr><td>Numpad5</td><td>Show / hide the drills panel</td></tr>
+          {% if scrimmage_available %}<tr><td>Numpad6</td><td>Show / hide the scrimmage panel</td></tr>{% endif %}
+          <tr><td>Numpad7</td><td>Open the dashboard in a browser</td></tr>
+          <tr><td>Numpad8</td><td>Save the current setup as a drill</td></tr>
+          <tr><td>Numpad9</td><td>Show / hide the tally panel</td></tr>
+          <tr><td>Numpad0</td><td>Reset the window layout</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Safety</h3>
+      <p>Beast Drills only ever writes to the game in local, offline Training Mode, and
+      it re-checks that every frame rather than once at startup. If the check fails it
+      does nothing at all. The Tally menu shows the gate's current state, so you can
+      see it rather than take it on trust.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="pages">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_stats.png')">
+      <h2>The pages</h2>
+    </div>
+    <div class="help-body">
+      <ul>
+        <li><strong>Dashboard</strong> &mdash; what is happening right now: the live
+        session, and the hit-zone heat map for the current matchup.</li>
+        <li><strong>Drills</strong> &mdash; the whole deck. Create, edit, tick for
+        rotation, import and export.</li>
+        <li><strong>Stats</strong> &mdash; the Anki-style panels: reviews, forecast,
+        calendar, retention, intervals, ease, hourly breakdown, answer buttons, added.</li>
+        <li><strong>Profile</strong> &mdash; one character's whole record: drills, due
+        count, success rate, average grade, best streak, their drill mix, their hit
+        zones, and which of their drills need the most work.</li>
+      </ul>
+
+      <h3>Hit zones</h3>
+      <p>A lifetime record of where you get hit, drawn on the character themselves:
+      greyed out, with the zone colours washed over head, body and legs. Hot means
+      most of your damage arrives there.</p>
+      <p>It is kept per <strong>player, dummy and side</strong>. An unfought matchup
+      reads as empty rather than borrowing another opponent's numbers &mdash; if Ryu
+      and Chun-Li showed the same figures, the map would be telling you nothing.</p>
+
+      <h3>The line under the nav</h3>
+      <p>Suggestions drawn from your own numbers, in the daftest voice available. It
+      knows what is due, which drills you keep failing, who you never play, and who you
+      keep using as a punching bag.</p>
+    </div>
+  </section>
+
+  <section class="panel panel-cyan" id="mods">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_stats.png')">
+      <h2>Mods</h2>
+    </div>
+    <div class="help-body">
+      <p>Beast Drills is meant to be built on. There are two ways in, and a
+         mod can use either without the other. Everything either one needs
+         is on this page &mdash; you never reference our code, and we never
+         reference yours.</p>
+
+      <h3>What will not break under you</h3>
+      <p>Both surfaces below are versioned, and the version is stated from
+         the first release rather than added when something first breaks.
+         Within a major version, a documented field will not be removed,
+         renamed, or change type; a documented file will not move or change
+         its shape; and a registration file that was valid stays valid.</p>
+      <p>These can happen at any time and are <b>not</b> breaking changes:
+         new fields appear, new files appear, and there are more characters,
+         drills and counters than there were. Read the fields you know and
+         ignore the rest &mdash; if your parser falls over on an unfamiliar
+         key, that is the parser&rsquo;s bug.</p>
+      <p>If a major version ever does arrive, <code>api_version</code> goes
+         up and the old shape is documented as gone. Check it and refuse
+         rather than guess.</p>
+
+      <h3>Reading Beast Drills from another program</h3>
+      <p>Everything Beast Drills knows is written as plain JSON in your
+         data folder &mdash; <code>Documents\Beast Drills</code> unless you
+         changed <code>data_dir</code>. Anything that can read a file can
+         read it &mdash; another REFramework script, a dashboard of your
+         own, an OBS overlay, a spreadsheet.</p>
+      <p>The game folder keeps only what ships with Beast Drills: move
+         names, frame data, translations, and <code>beast_drills.ini</code>
+         itself. Your own files are deliberately kept out of there, since
+         mod managers own that folder and some of them empty it when they
+         update a mod.</p>
+      <p><code>runtime/live_status.json</code> is rewritten <b>every 30
+         frames</b> &mdash; twice a second &mdash; and holds who is playing,
+         whether a session is running, which drill it is, and every tally
+         counter. <code>shared_database.json</code> holds the drills.
+         <code>runtime/inbox.json</code> says what is due next, and its
+         <code>heartbeat</code> is how you tell the service is running at
+         all. <code>stats.db</code> is the long-term history; open it
+         read-only.</p>
+      <p><b>Twice a second is not fast enough to animate against, and that
+         is deliberate.</b> A file written sixty times a second costs the
+         player's disk, not ours. So read this for what changes slowly
+         &mdash; which drill is running, who is playing, the score so far
+         &mdash; and read the game itself for anything per-frame. Your mod
+         has the same access to SF6 that Beast Drills has; if you want the
+         combo counter on the exact frame it moves, take it from the game.
+         What this file is for is the half you cannot get that way: what
+         Beast Drills is currently <em>asking the player to do</em>.</p>
+
+      <h4>If you are writing in Lua, read this</h4>
+      <p><b>REFramework sandboxes Lua to <code>reframework/data/</code>, and
+         there is no way out of it.</b> <code>json.load_file</code> refuses
+         absolute paths, <code>io.open</code> is replaced at startup with a
+         version that cannot leave the data directory, and
+         <code>fs.read</code> and <code>fs.glob</code> are rooted there. A
+         Lua mod cannot open <code>Documents\Beast Drills</code> at all.</p>
+      <p>So the file an overlay actually watches is <b>mirrored</b> into the
+         game folder, where the sandbox is not in the way:</p>
+      <pre class="help-pre"><code>&lt;SF6&gt;/reframework/data/BeastDrills_data/runtime/live_status.json</code></pre>
+      <p>Only derived state is mirrored, and that is the point: this file is
+         rewritten twice a second, so a mod manager deleting the copy costs
+         nothing. The database and the review history are never mirrored
+         &mdash; a second copy of something irreplaceable, sitting in the
+         folder that gets cleared, is a trap rather than a convenience. Read
+         those from <code>data_dir</code>. A C# plugin has no such limit and
+         can read either.</p>
+      <p>Anything in <code>debug/</code> is a research dump
+         rather than an interface. They change and disappear without
+         notice, which is what that folder is for.</p>
+      <p>The folder above is the DEFAULT. <code>beast_drills.ini</code> has a
+         <code>data_dir</code> setting, and somebody running the dashboard on
+         another computer will have pointed it at a network share &mdash; so
+         read the setting rather than assuming the path.</p>
+
+      <p>What is in <code>runtime/live_status.json</code>:</p>
+      <table class="help-table">
+        <tr><td><code>frame</code></td>
+            <td>Counts up every frame. Compare it to your last read to tell
+                &ldquo;the game is running&rdquo; from &ldquo;this file is
+                stale&rdquo;. The file is not deleted when the game closes,
+                so decide for yourself whether it is current &mdash; Beast
+                Drills&rsquo; own service ignores it past five seconds.</td></tr>
+        <tr><td><code>session_status</code></td>
+            <td>Whether a drill session is running, and its state.</td></tr>
+        <tr><td><code>session_attempt_count</code><br>
+                <code>session_attempts_target</code><br>
+                <code>session_success_count</code></td>
+            <td>Reps done, reps aimed for, reps passed.</td></tr>
+        <tr><td><code>tally_enabled</code>, <code>criteria_tally</code></td>
+            <td>Whether the tally is counting, and every counter with a
+                non-zero value. Counter names get added over time; treat an
+                unfamiliar one as valid.</td></tr>
+        <tr><td><code>criteria_tally_side</code></td>
+            <td>Which side the tally started on, or null. Null is a real
+                value: counts taken with no side belong to neither.</td></tr>
+        <tr><td><code>p1_character_id</code>, <code>p2_character_id</code></td>
+            <td>Who is playing, e.g. <code>"jp"</code>. Null until the game
+                says.</td></tr>
+        <tr><td><code>p1_combo_cnt</code>, <code>p2_combo_cnt</code></td>
+            <td>Combo counters. <b>The attacker&rsquo;s is the useful
+                one</b> &mdash; the victim&rsquo;s stays at 0 through a real
+                combo, which cost this project a long detour to learn.</td></tr>
+        <tr><td><code>dummy_slot_id</code><br>
+                <code>dummy_reversal_active_slot</code></td>
+            <td>Which recording slot is playing, and which reversal option
+                fired.</td></tr>
+      </table>
+
+      <h3>Changing something from another program</h3>
+      <p>Never write to <code>shared_database.json</code> or the stats
+         database. They have exactly one writer, and that is what stops two
+         programs racing over your scheduling data and losing a streak.
+         Instead drop one event per file into <code>outbox/</code>; the
+         service picks it up, applies it and deletes the file. Scheduling
+         state and review history are refused from an edit, so a mod cannot
+         cost you practice history however it builds the request.</p>
+
+      <h3>Putting a mod in this menu bar</h3>
+      <p>Drop a JSON file in <code>BeastDrills_data/mods/</code> naming what you
+         want in the menu, and it appears &mdash; under <b>MODS</b>, or
+         inside <b>FILE</b> or <b>VIEW</b> if that is where a player would
+         look for it. Nothing is compiled together and no code is shared.</p>
+      <pre class="help-pre"><code>mods/frametrap.json
+
+{
+  "api_version": 1,
+  "name": "Frame Trap Finder",
+  "author": "somebody",
+  "menu": "MODS",
+  "items": [
+    { "id": "open", "label": "Open", "hotkey": "F7" },
+    { "id": "scan", "label": "Scan current character" }
+  ]
+}</code></pre>
+      <p><code>api_version</code> and <code>items</code> are required;
+         <code>name</code> is what the submenu is called. <code>label</code>
+         is <b>optional</b> &mdash; leave it out and the menu shows the real
+         name of whatever the item drives, so there is nothing to keep in
+         step. Write one only to shorten it.</p>
+
+      <h4>Making an item actually do something</h4>
+      <p>A registration on its own gets you a <b>menu entry</b>, a hotkey and
+         settings. It does not get you behaviour: a click is a file written
+         into <code>mods/_events/</code> and nothing else. Either watch that
+         folder yourself, or tell us what the item drives and we will do it
+         for you.</p>
+      <table class="help-table">
+        <tr><th>key</th><th>what it does</th></tr>
+        <tr><td><code>call</code></td>
+            <td>A Lua global to reach when the item is clicked, dotted &mdash;
+                <code>"MyMod.scan"</code>. A function is called with the
+                item's <code>args</code>; a <b>boolean is toggled</b>, which
+                is what a menu item means for a flag. The path is walked over
+                the global table and never executed, so naming something can
+                only reach a value that already exists.</td></tr>
+        <tr><td><code>checkbox</code></td>
+            <td>The caption of a checkbox your mod already draws. Beast
+                Drills watches it go past <code>imgui.checkbox</code>, so the
+                tick on the menu is your real state and clicking it sets your
+                real state. Nothing of yours changes.</td></tr>
+        <tr><td><code>from</code></td>
+            <td>Which script file to run once, off screen, to learn that
+                caption's value before the player has opened your UI. Without
+                it the item honestly reads <em>(not seen yet)</em> until you
+                first draw.</td></tr>
+        <tr><td><code>window</code></td>
+            <td>The window this toggle opens. Its close button then switches
+                the toggle off &mdash; worth setting, because a mod that
+                calls <code>begin_window(title, true, 0)</code> and discards
+                the result has an X that cannot work.</td></tr>
+        <tr><td><code>draw</code></td>
+            <td>Host your whole interface inside a Beast Drills panel, for a
+                mod with no obvious menu items. While a registration claims
+                it, it draws in <em>one</em> place rather than two &mdash; it
+                moves, it does not duplicate.</td></tr>
+      </table>
+      <p><b>A local is reachable from nowhere</b>, by anyone. If your state
+         lives in one and you would rather not depend on a caption string,
+         export it &mdash; one additive line, no behaviour changed, the same
+         table:</p>
+      <pre class="help-pre"><code>local p1 = make_config()
+
+MyMod = { p1 = p1 }        -- the only line you add</code></pre>
+      <pre class="help-pre"><code>{ "id": "p1", "label": "P1 info", "call": "MyMod.p1.enabled" }</code></pre>
+      <p>Your draw code reads the field it always read and never learns who
+         set it. This is the robust route; <code>checkbox</code> exists for
+         mods whose author has not done it.</p>
+      <p> A version we do
+         not read refuses the whole file and says so in the menu, rather
+         than half-registering it, and a file that will not parse is listed
+         with its error rather than skipped &mdash; an hour lost to a
+         trailing comma is an hour this page exists to prevent.</p>
+      <h4>Or keep the file inside your own mod</h4>
+      <p>Copying a file into somebody else's folder has a cost you pay
+         later: when a player uninstalls your mod, our menu keeps an entry
+         pointing at nothing. So leave the file where it belongs and name
+         it in <code>beast_drills.ini</code> instead &mdash; one line, any
+         name on the left:</p>
+      <pre class="help-pre"><code>[mods]
+frame_trap_finder = reframework/autorun/FrameTraps/beast.json</code></pre>
+      <p>The entry then appears and disappears with your mod, and nothing
+         of yours lives in our folder. Everything else is identical: same
+         format, same events, same hotkeys.</p>
+      <p>The path is relative to the Street Fighter 6 folder, so it
+         survives moving a Steam library to another drive. A path that
+         resolves <em>outside</em> that folder is ignored &mdash; an
+         <code>.ini</code> is a text file somebody might paste into from a
+         forum post. A path whose file is not there is skipped in silence,
+         because that is what an uninstalled mod looks like; anything else
+         wrong with it is reported in the menu, the same as a file in
+         <code>mods/</code>. A name already registered refuses the second
+         one and says so, since two mods sharing a name would share an
+         event filename and one would quietly get the other's clicks.</p>
+
+      <h4>Settings, in the player's own file</h4>
+      <p>A player hunting for each mod's own settings file is back to the
+         problem <code>beast_drills.ini</code> solved, so declare yours in
+         the same registration file and they appear in theirs:</p>
+      <pre class="help-pre"><code>"settings": [
+  { "key": "gap_frames", "default": 3,
+    "note": "How wide a gap counts as a frame trap." }
+]</code></pre>
+      <p>Beast Drills adds a section named after your registration, with
+         your notes as comments, the way it generates its own settings.
+         <b>You do not read the ini</b> &mdash; the resolved values arrive
+         as a file beside the events you already watch,
+         <code>mods/_settings/&lt;yourmod&gt;.json</code>. A second parser
+         of a format we control means two readers that can disagree about
+         a default, and the disagreement would be silent inside
+         <em>your</em> mod, so you would be debugging our file.</p>
+      <p>Three promises about that file, because it is the player's: a
+         value they set is <b>never</b> changed, their own comments and
+         ordering survive, and uninstalling your mod does not delete your
+         section &mdash; put it back a week later and the settings are
+         still there.</p>
+
+      <p>The click arrives as a file of its own:</p>
+      <pre class="help-pre"><code>mods/_events/frametrap_1787900000000.json
+
+{ "mod": "frametrap", "item": "scan", "at": 1787900000 }</code></pre>
+      <p>Watch that folder, act, and <b>empty the file</b>. The timestamp is
+         milliseconds, zero-padded, so a plain sort is a sort by time.</p>
+      <pre class="help-pre"><code>pcall(fs.write, path, "")   -- consumed</code></pre>
+      <p><b>Empty it &mdash; do not try to delete it.</b> REFramework strips
+         <code>os.remove</code> from Lua, and <code>fs</code> gives you only
+         <code>glob</code>, <code>read</code> and <code>write</code>, so a
+         Lua mod cannot delete a file at all. <code>os.remove</code> calls
+         nil, a <code>pcall</code> swallows it, and the event stays exactly
+         where it was &mdash; to be re-read and re-acted on every time you
+         poll. A toggle wired that way fires several times a second. An
+         empty file does not parse, so nothing acts on it twice; Beast
+         Drills sweeps the empties and clears anything older than a minute,
+         so a mod that is not installed does not collect clicks forever.</p>
+      <p>That indirection is deliberate: a mod that was not running when the
+         click happened still sees it when it starts.</p>
+      <p>A mod can claim a hotkey too. One already used by Beast Drills or
+         by another mod is refused, and the reason appears where the
+         shortcut would be, so a key that does nothing is never a mystery.
+         Between two mods the one that sorts first alphabetically keeps it
+         &mdash; arbitrary, but stable, where load order would move the
+         binding around. <code>"Num9"</code> and <code>"Numpad9"</code> both
+         work, and a name we cannot read is reported the same way rather
+         than ignored. Bindings only fire while the Beast Drills interface
+         has focus, so a mod hotkey can never leak into the match.</p>
+
+      <h3>What a mod cannot do</h3>
+      <p>It cannot draw <em>over the game</em>. That needs an ImGui draw
+         list, and those crash SF6 from inside a plugin here &mdash; twice,
+         both times taking the game down. A mod draws its own windows
+         through REFramework as it always has.</p>
+      <p>It cannot reach another mod's <b>locals</b>. If a value lives in a
+         <code>local</code> and no global holds it, nothing can name it
+         &mdash; not us, not another mod, not the debug library. That is why
+         <code>checkbox</code> watches a caption instead: the value goes past
+         a function we can wrap even when the variable is out of reach.</p>
+      <p>And it gets no access to internals &mdash; no session object, no
+         scheduler. Everything worth reading is in the files above, which
+         are held still across updates in a way internals are not.</p>
+    </div>
+  </section>
+  </div>
+
+
+</div>
+<script>
+// Click a capped screenshot to expand it to the full content width, and
+// again to shrink it back. Kept here rather than in dashboard.js: the
+// help page loads no other JS, and this is the only behaviour it needs.
+document.querySelectorAll(".help-figure img").forEach((img) => {
+  img.title = "Click to expand";
+  img.addEventListener("click", () => {
+    const fig = img.closest(".help-figure");
+    const zoomed = fig.classList.toggle("is-zoomed");
+    img.title = zoomed ? "Click to shrink" : "Click to expand";
+  });
+});
+</script>
+<script src="{{ url_for('static', filename='help.js') }}"></script>
+</body>
+</html>

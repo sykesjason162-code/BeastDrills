@@ -1,0 +1,335 @@
+{
+    "drills": [
+        {
+            "id": "anti_air_after_corner_throw",
+            "name": "Anti-Air After Corner Throw",
+            "description": "Opponent knocked down in the corner, 3 reversal options: cr.LP, vertical jump, or forward jump. Throw the cr.LP option, anti-air the jumps.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "unsupported": true,
+            "training_settings": {
+                "position": "dummy_corner_right"
+            },
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "throw",
+                    "note": "cr.LP reversal -- dummy stays grounded, throw them"
+                },
+                "1": {
+                    "expected_response": "anti_air",
+                    "note": "vertical jump reversal"
+                },
+                "2": {
+                    "expected_response": "anti_air",
+                    "note": "forward jump reversal"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "ch_vs_delayed_throw_tech",
+            "name": "CH vs Delayed Throw Tech",
+            "description": "Block After First Hit. Wake-up options are a 4-frame-delayed throw or nothing. Counter-hit into a combo when your delayed normal beats the throw's startup; tick-throw off a micro-walk when it doesn't.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "reversal_slots": [
+                    {
+                        "index": 0,
+                        "type": 5,
+                        "skill_index": 8,
+                        "delay": 4
+                    },
+                    {
+                        "index": 1,
+                        "type": 5,
+                        "skill_index": 0,
+                        "delay": 0
+                    }
+                ],
+                "block_setting": "block_after_first_hit",
+                "position": "dummy_corner_right"
+            },
+            "fixed_expected_response": ["throw", "counter_hit", "punish_counter_hit"],
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": ["counter_hit", "punish_counter_hit"],
+                    "note": "delayed throw (4f) -- beat the throw startup with a delayed normal for counter-hit, confirm combo"
+                },
+                "1": {
+                    "expected_response": "throw",
+                    "note": "dummy does nothing -- your delayed normal gets blocked, react with a micro-walk into throw"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "knockdown_perfect_parry_practice",
+            "name": "Knockdown Perfect Parry Practice",
+            "description": "A single meaty crouching medium punch on knockdown wakeup. Perfect Parry window is 2 frames (SuperCombo wiki, Street Fighter 6/Defense), then side-switch for the best punish.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    {
+                        "index": 0,
+                        "weight": 1,
+                        "pattern": [2, 2, 2, 2, 2, 2, 0, 0, 0, 0]
+                    }
+                ],
+                "repeat_replay": "always",
+                "position": "player_corner_left"
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "perfect_parry",
+                    "note": "meaty crouching medium punch on knockdown wakeup -- perfect parry window is 2 frames (SuperCombo wiki, Street Fighter 6/Defense), then side-switch for max punish"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "cr_mk_drive_rush_hit_confirms",
+            "name": "cr.MK Drive Rush Hit-Confirms",
+            "description": "Dummy walks at varied distances, sometimes into low guard. Hit-confirm cr.MK into a Drive Rush cancel combo on hit, or a jab frame-trap on block.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    0,
+                    1,
+                    2
+                ]
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "hit_confirm_combo_or_pressure",
+                    "note": "dummy walks back/forward without guarding"
+                },
+                "1": {
+                    "expected_response": "hit_confirm_combo_or_pressure",
+                    "note": "variable walk distance into low guard"
+                },
+                "2": {
+                    "expected_response": "hit_confirm_combo_or_pressure",
+                    "note": "variable walk distance into low guard (second variant)"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "fuzzy_light_jab",
+            "name": "Fuzzy Light Jab",
+            "description": "3 slots off a jump-in plus-on-block normal: block the immediate jab, counter-hit the delayed heavy, or just block. One slightly-delayed 4-frame jab covers all three.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    0,
+                    1,
+                    2
+                ]
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "block_then_punish",
+                    "note": "jump, plus-on-block normal, 4f jab -- block the jab"
+                },
+                "1": {
+                    "expected_response": "counter_hit",
+                    "note": "jump, plus-on-block normal, heavy attack -- counter-hit the heavy"
+                },
+                "2": {
+                    "expected_response": "block",
+                    "note": "jump, plus-on-block normal, block -- just block"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "perfect_parry_vs_dr_overheads",
+            "name": "Perfect Parry vs Drive Rush Overheads",
+            "description": "vs Juri, mid-screen. 3 Drive Rush overhead variants; react to the overhead animation with a deliberately late-timed parry to guarantee Perfect Parry, then punish.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "character_id": "juri",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    0,
+                    1,
+                    2
+                ],
+                "position": "center"
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "perfect_parry",
+                    "note": "neutral jump, drive rush, standing medium punch"
+                },
+                "1": {
+                    "expected_response": "perfect_parry",
+                    "note": "neutral jump, drive rush, crouching medium punch"
+                },
+                "2": {
+                    "expected_response": "perfect_parry",
+                    "note": "neutral jump, forward medium kick -- time the parry slightly late to guarantee Perfect Parry, then punish"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "reacting_to_jump_di_dash_jab",
+            "name": "Reacting to Jump/DI/Dash Jab",
+            "description": "vs an opponent abbreviated \"DJ\" in the source (inferred as Dee Jay, not independently confirmed). Anti-air the jump, Drive Impact the DI, stuff the dash-in jab with two lights into a special.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "character_id": "dee_jay",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    0,
+                    1,
+                    2
+                ],
+                "position": "center"
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "anti_air",
+                    "note": "neutral jump into any forward jump attack"
+                },
+                "1": {
+                    "expected_response": "drive_impact",
+                    "note": "neutral jump into Drive Impact -- react with your own DI"
+                },
+                "2": {
+                    "expected_response": "stuff_dash",
+                    "note": "neutral jump into dash light punch -- stop with two lights into a special"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "mp_mk_dr_os_into_aa",
+            "name": "MP or MK>DR OS on Hit/Whiff into AA",
+            "description": "Poke with an option-select input. Combo on hit, anti-air if it whiffs and the dummy jumps, block if it whiffs and the dummy does nothing. Depends on both your poke's own outcome and which slot fires.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    0,
+                    1,
+                    2
+                ]
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "hit_confirm_combo",
+                    "note": "neutral jump into any forward jump attack -- your poke+OS should hit, confirm combo"
+                },
+                "1": {
+                    "expected_response": "anti_air",
+                    "note": "neutral jump into forward dash -- your poke whiffs, dummy jumps in, react with anti-air"
+                },
+                "2": {
+                    "expected_response": "block",
+                    "note": "neutral jump into block -- your poke whiffs, dummy does nothing, just block"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "reacting_to_neutral_dr_jump",
+            "name": "Reacting to Neutral DR/Jump",
+            "description": "Block, anti-air, or stuff a Drive Rush with a reactive poke, depending on which of 3 randomized options the dummy plays from a neutral walk-up.",
+            "source": "Jason's practice routine (Anki deck + SF6 training-drill video guide)",
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "training_settings": {
+                "recording_slots": [
+                    0,
+                    1,
+                    2
+                ]
+            },
+            "slot_outcomes": {
+                "0": {
+                    "expected_response": "block",
+                    "note": "walk forward/backward into block -- do nothing"
+                },
+                "1": {
+                    "expected_response": "anti_air",
+                    "note": "walk forward/backward into forward jumping attack"
+                },
+                "2": {
+                    "expected_response": "stuff_drive_rush",
+                    "note": "walk forward/backward into drive rush attack -- stuff with your best poke on reaction"
+                }
+            },
+            "total_sessions": 0
+        },
+        {
+            "id": "6hk_236hp_hp_22hp_corner",
+            "name": "6HK > 236HP > HP > 22HP (Corner Wall-Bounce Juggle)",
+            "description": "No reaction needed -- landing the combo IS the success condition. In the corner, cancel 6HK into 236HP for the wall bounce, link HP off the bounce (the hard part), then cancel into 22HP.",
+            "source": "Jason's practice routine",
+            "character_id": "jp",
+            "drill_type": "combo",
+            "combo_route": [
+                {
+                    "input": "6HK",
+                    "connection": "starter"
+                },
+                {
+                    "input": "236HP",
+                    "connection": "cancel",
+                    "note": "6HK cancels into 236HP -- causes the wall bounce"
+                },
+                {
+                    "input": "HP",
+                    "connection": "link",
+                    "note": "the hard part -- a true link off the wall bounce, not a cancel; this is where the juggle actually starts"
+                },
+                {
+                    "input": "22HP",
+                    "connection": "cancel",
+                    "note": "HP cancels into 22HP"
+                }
+            ],
+            "target_combo_hits": 4,
+            "training_settings": {
+                "position": "dummy_corner_right"
+            },
+            "interval_days": 1,
+            "ease_factor": 2.5,
+            "streak": 0,
+            "next_review": "2026-08-06T00:00:00Z",
+            "total_sessions": 0
+        }
+    ]
+}

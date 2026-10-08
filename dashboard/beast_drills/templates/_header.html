@@ -1,0 +1,97 @@
+{#
+  Three-tier header, modelled on Buckler's Boot Camp (Jason sent the real
+  one and asked for ours to work the same way).
+
+  The rhythm is what carries it, not any one element:
+    1. a thin utility strip -- outbound links left, at-a-glance counters right
+    2. a tall nav band -- wordmark left, icon+label destinations right
+    3. a quiet sub-nav strip for what lives inside the current page
+
+  Hairline gold rules separate the tiers; that is what makes three bands
+  read as one header rather than three stacked bars.
+
+  `active` is set by each page so its own destination is lit.
+#}
+<header class="bd-header">
+
+  {# ---- tier 1: utility ---------------------------------------- #}
+  <div class="bd-utility">
+    <div class="bd-utility-left">
+      {# Outbound, so they open away from the app. rel=noopener because
+         target=_blank hands the new tab a reference back to this one.
+
+         RETARGETED BY THE LOCALE. Jason: "some links should go to
+         relevant equivelant site ... These websites are ok for english
+         speaker, but not so much for them." The English defaults are
+         here so the page is correct with no locale loaded at all; a
+         locale's @links overrides both the address and the label. #}
+      <a class="bd-util-link" id="bd-link-sf6"
+         href="https://www.streetfighter.com/6/en-us"
+         target="_blank" rel="noopener noreferrer">Street Fighter 6</a>
+      <span class="bd-util-rule"></span>
+      <a class="bd-util-link" id="bd-link-reference"
+         href="https://wiki.supercombo.gg/w/Street_Fighter_6"
+         target="_blank" rel="noopener noreferrer">Supercombo Wiki</a>
+      <span class="bd-util-rule"></span>
+      {# Jason, docs/idea-list.md: "add the footsies handbook to the
+         dashboard next to supercombo wiki." Sirlin-era neutral theory,
+         and the vocabulary several drills already lean on -- oki-waza,
+         ate-waza, sashi-kaeshi all come from here. NOT locale-retargeted
+         like the two above: there is no translated edition to point at,
+         and inventing one would be worse than the English original. #}
+      <a class="bd-util-link" id="bd-link-footsies"
+         href="https://sonichurricane.com/?page_id=1702"
+         target="_blank" rel="noopener noreferrer">Footsies Handbook</a>
+    </div>
+
+    <div class="bd-utility-right">
+      {# Filled by dashboard.js from /api/stats/overview. #}
+      <div id="overview-badges" class="bd-counters"></div>
+      {# Filled by i18n.js, and REMOVED ENTIRELY when only English
+         exists -- a picker offering one language advertises a choice
+         that is not there. #}
+      <select id="bd-lang" class="bd-util-lang" hidden aria-label="Language"></select>
+      <span class="bd-util-rule"></span>
+      <a class="bd-util-link bd-util-icon" href="/help" data-t>Help</a>
+    </div>
+  </div>
+
+  {# ---- tier 2: main navigation --------------------------------- #}
+  <div class="bd-nav-band">
+    <a class="bd-wordmark" href="/">
+      <span class="bd-wordmark-main">Beast Drills</span>
+      <span class="bd-wordmark-sub" data-t>Spaced-repetition training</span>
+    </a>
+
+    <nav class="bd-nav">
+      <a class="bd-nav-item{% if active == 'dashboard' %} is-active{% endif %}"
+         href="/" style="--nav-icon:url('/static/sf6/icon_stats.png')" data-t>Dashboard</a>
+      <a class="bd-nav-item{% if active == 'drills' %} is-active{% endif %}"
+         href="/drills" style="--nav-icon:url('/static/sf6/icon_cfn.png')" data-t>Drills</a>
+      <a class="bd-nav-item{% if active == 'stats' %} is-active{% endif %}"
+         href="/stats" style="--nav-icon:url('/static/sf6/top_icon_information.png')" data-t>Stats</a>
+      {# Shelved for the beta -- see features.scrimmage_available. #}
+      {% if scrimmage_available %}
+      <a class="bd-nav-item{% if active == 'scrimmage' %} is-active{% endif %}"
+         href="/scrimmage" style="--nav-icon:url('/static/sf6/icon_cfn.png')" data-t>Scrimmage</a>
+      {% endif %}
+      <a class="bd-nav-item{% if active == 'profile' %} is-active{% endif %}"
+         href="/profile" style="--nav-icon:url('/static/sf6/icon_profile.png')" data-t>Profile</a>
+    </nav>
+  </div>
+
+  {# ---- tier 3: the line ---------------------------------------- #}
+  {#
+    This used to repeat the nav one tier up. Now it carries a suggestion
+    drawn from real numbers, said in the daftest voice available -- see
+    ticker.js. Server-rendered empty and filled client-side, so a page
+    that loads without JS just shows a quiet empty strip rather than a
+    broken one.
+  #}
+  <div class="bd-subnav">
+    <span class="bd-ticker-mark"></span>
+    <span class="bd-ticker" id="bd-ticker"></span>
+  </div>
+</header>
+<script src="/static/i18n.js"></script>
+<script src="/static/ticker.js"></script>

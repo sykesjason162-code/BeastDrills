@@ -1,0 +1,49 @@
+:root{
+  --c-gave:#ae8c00;
+  --c-took:#00a3be;
+}
+
+.scrim-picker{display:flex;gap:18px;align-items:flex-end;margin:18px 0 6px;
+  flex-wrap:wrap}
+.scrim-picker label{display:flex;flex-direction:column;gap:4px;
+  flex:1 1 220px;min-width:0;
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.scrim-picker select{background:var(--inset);color:var(--txt);
+  border:1px solid var(--line2);border-radius:var(--radius);padding:7px 10px;
+  font:inherit;width:100%;min-width:0}
+
+.scrim-hero{display:flex;gap:34px;align-items:baseline;flex-wrap:wrap;
+  padding:16px 0 4px;border-bottom:1px solid var(--line)}
+.scrim-score{font-size:52px;line-height:1;color:var(--gold);font-weight:700}
+.scrim-score small{font-size:16px;color:var(--dim);font-weight:400}
+.scrim-facts{display:flex;gap:26px;flex-wrap:wrap;color:var(--dim);font-size:13px}
+.scrim-facts b{color:var(--txt);font-weight:600}
+
+.scrim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:22px;margin-top:20px}
+.scrim-panel{background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 16px}
+.scrim-panel h3{margin:0 0 2px;font-size:13px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--txt)}
+.scrim-panel .sub{margin:0 0 12px;font-size:12px;color:var(--dim)}
+
+.scrim-legend{display:flex;gap:16px;font-size:12px;color:var(--dim);margin-bottom:10px}
+.scrim-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;
+  margin-right:6px;vertical-align:middle}
+
+.scrim-list{list-style:none;margin:0;padding:0}
+.scrim-list li{display:flex;justify-content:space-between;gap:12px;
+  padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.scrim-list li:last-child{border-bottom:0}
+.scrim-list .why{color:var(--dim);font-size:12px}
+.scrim-gap{color:var(--prog)}
+
+.scrim-rounds{display:flex;flex-direction:column;gap:14px}
+.scrim-round{border-left:2px solid var(--line2);padding-left:10px}
+.scrim-round-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+  margin-bottom:6px;font-size:13px}
+.scrim-round-head .won{color:var(--done);font-size:11px;text-transform:uppercase;
+  letter-spacing:.08em}
+.scrim-round-head .lost{color:var(--danger);font-size:11px;text-transform:uppercase;
+  letter-spacing:.08em}
+.scrim-round-head .why{color:var(--dim);font-size:12px;margin-left:auto}

@@ -1,0 +1,48 @@
+{
+  "app.training.tf_ReversalSetting.ERType": {
+    "0": "NONE",
+    "1": "DOWN",
+    "2": "GUARD",
+    "3": "DAMAGE"
+  },
+  "app.training.tf_ReversalSetting.EReversalState": {
+    "0": "NONE",
+    "1": "INIT",
+    "2": "READY",
+    "3": "PLAY_WAIT",
+    "4": "PLAYING",
+    "5": "PLAY_END",
+    "6": "PLAY_MOVE_WORLD"
+  },
+  "app.training.tf_ReversalSetting.EReversalWaitState": {
+    "0": "NONE",
+    "1": "QUICK_WAIT",
+    "2": "PLAY_CHECK",
+    "3": "PLAY_WAIT"
+  },
+  "app.training.tf_ReversalSetting.tfReversalData.rType": {
+    "-1": "NONE",
+    "0": "TRIGGER",
+    "1": "RECORD"
+  },
+  "app.training.tf_RecordSetting.RecordState": {
+    "0": "NONE",
+    "1": "RECORD_READY",
+    "2": "RECORD_COUNTDOWN",
+    "3": "RECORD_NOW",
+    "4": "PLAY_READY",
+    "5": "PLAY_NOW",
+    "6": "PLAY_LOOP"
+  },
+  "app.training.ReversalType": {
+    "-1": "NONE",
+    "0": "NORMAL",
+    "1": "COMMAND_NORMAL",
+    "2": "SPECIAL",
+    "3": "SA",
+    "4": "RECORDING",
+    "5": "COMMON",
+    "6": "OTHER",
+    "7": "MAX"
+  }
+}

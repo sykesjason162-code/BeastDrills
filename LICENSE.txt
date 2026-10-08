@@ -1,0 +1,24 @@
+Beast Drills MOD LICENSE AGREEMENT (FREEWARE)
+
+1. GRANT OF LICENSE
+This software is provided entirely free of charge. You are granted a non-exclusive, 
+non-transferable right to install, run, and use this mod for personal, 
+non-commercial entertainment purposes.
+
+2. CLOSED SOURCE & DECOMPILATION
+The author retains all rights to the underlying source code. The software is 
+distributed in a compiled binary format (.dll). While you are free to use, modify, 
+or experiment with your own local copy of the binary file, you may not reverse-engineer, 
+decompile, or disassemble the file for the purpose of replicating, redistributing, 
+or cloning the author's original logic under a different name.
+
+3. REDISTRIBUTION
+You may share or redistribute this compiled mod, provided that:
+a) It is distributed entirely free of charge.
+b) This LICENSE.txt file remains intact and attached to the software.
+c) Credit is given to the original author.
+
+4. NO WARRANTY
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. 
+THE AUTHOR IS NOT LIABLE FOR ANY CLAIMS, DAMAGES, OR GAME BANS ARISING FROM THE USE 
+OF THIS SOFTWARE.

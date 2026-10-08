@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "WHICH GAME BUILD THESE TABLES DESCRIBE.",
+    "",
+    "PRACTICES.md section 6: action ids move when the game is patched, and",
+    "the failure is silent -- a shifted id produces plausible wrong numbers",
+    "rather than an error. A name table captured against one build and read",
+    "against another is exactly that failure, so the build has to be",
+    "recorded for a mismatch to be detectable at all.",
+    "",
+    "SF6WTT records the game version beside every id in its combo format for",
+    "this same reason (COMBO_JSON_SPEC.md 3d).",
+    "",
+    "HOW game_version WAS ESTABLISHED, and what is inference in it: the",
+    "tables were captured 2026-08-15 (file dates and the commit that added",
+    "them agree). StreetFighter6.exe reports FileVersion 1.0.0.33 and has",
+    "been unmodified since 2026-08-03, so that is the build that was",
+    "installed on the capture date. The command_display catalogs were",
+    "generated 2026-08-03 independently and carry their own hashes, which",
+    "corroborates the date but is not a second reading of the version.",
+    "",
+    "The inference is 'the installed build did not change between 2026-08-03",
+    "and 2026-08-15'. Anything captured from here on should read the version",
+    "at capture time rather than reconstruct it."
+  ],
+  "game_version": "1.0.0.33",
+  "game_version_source": "StreetFighter6.exe FileVersion, read 2026-08-28",
+  "game_version_confidence": "inferred: the build installed on the capture date, not read at capture time",
+  "captured_at": "2026-08-15",
+  "covers": "action_names/*.json in this directory"
+}

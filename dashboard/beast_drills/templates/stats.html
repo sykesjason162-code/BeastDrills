@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills &mdash; Stats</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='stats' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  <h2 class="section-divider" data-t>Stats</h2>
+
+  <!-- A character is a DECK here, in Anki's sense (Jason, 2026-08-22:
+       "stats should have all the characters individually and an overall
+       for all the characters. Lets view characters like decks in anki").
+       Deliberately a PICKER and not the loaded character -- "for stats it
+       doesn't need to be the active character. It can just be a picker"
+       -- so you can read Ryu's record while playing JP. "All characters"
+       is the default because picking someone would quietly misreport
+       everyone else. -->
+  <div class="stats-character-bar">
+    <label for="stats-character" data-t>Deck</label>
+    <select id="stats-character"></select>
+    <!-- The opponent half of the same question. Deck alone answers "how
+         am I doing"; adding an opponent answers "how am I doing in this
+         matchup", which is what a scrimmage loss actually raises.
+         Only the four review-backed panels below narrow by it -- Forecast
+         and Added come from DRILLS, and most drills have no opponent at
+         all, so filtering those would empty them rather than narrow
+         them. -->
+    <label for="stats-dummy" data-t>vs</label>
+    <select id="stats-dummy"></select>
+    <span class="dim" id="stats-character-note"></span>
+  </div>
+
+  <!-- Calendar and Retention lead the Stats section and each keep a
+       full-width row of their own: the calendar is a 53-week strip that
+       is unreadable squeezed into a grid column, and Retention is a
+       table rather than a chart. Every other panel is chart-shaped and
+       reads fine side by side, so they flow into .stats-grid below
+       (2026-08-17, Jason: "I would like the calender and retention to be
+       at the top of all graphs and have its own line. All the other
+       graphs can probably be like the first image."). -->
+  <section class="panel" id="calendar-panel">
+    <div class="panel-head">
+      <h2 data-t>Calendar</h2>
+      <div class="year-nav">
+        <button id="calendar-prev-year" class="btn-icon">&larr;</button>
+        <span id="calendar-year-label"></span>
+        <button id="calendar-next-year" class="btn-icon">&rarr;</button>
+      </div>
+    </div>
+    <div id="calendar-grid" class="calendar-grid"></div>
+  </section>
+
+  <section class="panel" id="retention-panel">
+    <div class="panel-head">
+      <h2 data-t>Retention</h2>
+      <span class="dim" style="font-size:12px">Pass rate of drills with an interval &ge; 1 day</span>
+    </div>
+    <div id="retention-table-wrap"></div>
+  </section>
+
+  <div class="stats-grid">
+
+  <section class="panel" id="today-panel">
+    <div class="panel-head"><h2 data-t>Today</h2></div>
+    <div id="today-body" class="live-body"></div>
+  </section>
+
+  <section class="panel" id="card-counts-panel">
+    <div class="panel-head"><h2 data-t>Drill Counts</h2></div>
+    <div id="card-counts-body" class="hit-zones-body"></div>
+  </section>
+
+  <section class="panel" id="forecast-panel">
+    <div class="panel-head">
+      <h2 data-t>Forecast</h2>
+      <span class="dim" style="font-size:12px">Sessions due in the future</span>
+    </div>
+    <div id="forecast-chart" class="chart-body"></div>
+    <div id="forecast-stats" class="live-body"></div>
+  </section>
+
+  <section class="panel" id="reviews-panel">
+    <div class="panel-head">
+      <h2 data-t>Reviews</h2>
+      <div class="period-toggle" data-chart="reviews">
+        <button data-period="30">1 month</button>
+        <button data-period="90">3 months</button>
+        <button data-period="365">1 year</button>
+        <button data-period="all" class="active" data-t>all</button>
+      </div>
+    </div>
+    <div id="reviews-chart" class="chart-body"></div>
+    <div id="reviews-stats" class="live-body"></div>
+  </section>
+
+  <section class="panel" id="intervals-panel">
+    <div class="panel-head"><h2 data-t>Review Intervals</h2></div>
+    <div id="intervals-chart" class="chart-body"></div>
+    <div id="intervals-stat" class="live-body"></div>
+  </section>
+
+  <section class="panel" id="ease-panel">
+    <div class="panel-head"><h2 data-t>Drill Ease</h2></div>
+    <div id="ease-chart" class="chart-body"></div>
+    <div id="ease-stat" class="live-body"></div>
+  </section>
+
+  <section class="panel" id="hourly-panel">
+    <div class="panel-head">
+      <h2 data-t>Hourly Breakdown</h2>
+      <span class="dim" style="font-size:12px">Success rate for each hour of the day</span>
+    </div>
+    <div id="hourly-chart" class="chart-body"></div>
+  </section>
+
+  <section class="panel" id="answer-buttons-panel">
+    <div class="panel-head"><h2 data-t>Answer Buttons</h2></div>
+    <div id="answer-buttons-chart" class="chart-body"></div>
+  </section>
+
+  <section class="panel" id="added-panel">
+    <div class="panel-head">
+      <h2 data-t>Added</h2>
+      <div class="period-toggle" data-chart="added">
+        <button data-period="30">1 month</button>
+        <button data-period="90">3 months</button>
+        <button data-period="365">1 year</button>
+        <button data-period="all" class="active" data-t>all</button>
+      </div>
+    </div>
+    <div id="added-chart" class="chart-body"></div>
+    <div id="added-stats" class="live-body"></div>
+  </section>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='labels.js') }}"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
