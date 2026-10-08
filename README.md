@@ -7,6 +7,14 @@ Spaced-repetition training for Street Fighter 6.
 > Back up `Documents\Beast Drills` now and then, and please report anything
 > that looks wrong on the page you downloaded it from.
 
+> ⚠️ **Do not use the REFramework on Nexus Mods.** It is an older build
+> (June 2025) and Beast Drills cannot run on it. Mod managers install it
+> automatically, and it can replace a newer REFramework you already had,
+> after which the game closes or Beast Drills never appears. Get
+> REFramework **nightly 01394 from GitHub** instead (both zips, same
+> page) — see [What you need](#what-you-need). If Vortex or Fluffy already
+> installed the Nexus one, disable it there first.
+
 Beast Drills treats execution like flashcards. You practise a drill, it
 grades the rep from what actually happened in the game, and it schedules
 the next showing — often for the ones you keep missing, rarely for the ones
@@ -37,9 +45,23 @@ it.
 ## What you need
 
 - **Street Fighter 6** on PC.
-- **REFramework**, with .NET plugin support —
-  <https://github.com/praydog/REFramework>. Install that first and confirm
+- **REFramework nightly 01394, with its .NET plugin support** — from
+  <https://github.com/praydog/REFramework-nightly/releases/tag/nightly-01394-ec6c81fd39831b328027ae00e102bc9c9c3f8aa5>.
+  Download **both** `REFramework.zip` and `csharp-api.zip` from that one
+  page and extract both into your Street Fighter 6 folder. Then confirm
   the game boots with its menu (**Insert**) before adding Beast Drills.
+
+  **Not the REFramework on Nexus Mods.** That one is an older build, from
+  June 2025, and Beast Drills does not run on it. If Vortex or Fluffy
+  already installed it for you, disable it there first, or it will put the
+  old build back over the new one.
+
+  The two zips must come from the **same** nightly. Mixing them is what
+  happens when a mod manager replaces one half, and it stops Beast Drills
+  appearing (see *Nothing appears in-game* below). Newer nightlies may well
+  work; 01394 is the one this beta was tested on.
+- **The .NET 10 Runtime (x64)** — <https://dotnet.microsoft.com/download/dotnet/10.0>.
+  REFramework's .NET plugin support runs on it.
 - **Python 3.10 or newer**, from <https://www.python.org/downloads/>. Tick
   **"Add python.exe to PATH"** during install; the launcher needs to find it.
 - **Flask**, one Python package the dashboard uses. You do not need to
@@ -236,7 +258,18 @@ an action, or record one in Training Mode and save the setup over the drill.
 
 **Nothing appears in-game at all.**
 Check REFramework itself loads (**Insert** opens its menu). If it does, look
-for `BeastDrills.dll` under `reframework\plugins\managed\`.
+for `BeastDrills.dll` under `reframework\plugins\managed\`. Then open
+`re2_framework_log.txt` in the game folder and search for `BeastDrills`:
+
+- `overlay off: REFramework's core ... and its csharp-api are from
+  different builds` — the two REFramework zips came from different
+  nightlies, usually because a mod manager installed the Nexus copy over
+  one of them. Reinstall both from the same nightly (see *What you need*).
+  Beast Drills turns its overlay off rather than let the mismatch crash
+  the game.
+- No `BeastDrills` lines at all — REFramework's .NET support is not
+  loading. Check `csharp-api.zip` was extracted and the .NET 10 Runtime is
+  installed.
 
 ---
 
