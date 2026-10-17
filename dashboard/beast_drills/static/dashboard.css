@@ -195,6 +195,24 @@ body{
   content:"P1 / P2"; background:linear-gradient(90deg,var(--cyan) 50%,var(--magenta) 50%);
 }
 
+.cs-bar{position:absolute; inset:0; pointer-events:none; z-index:1}
+.cs-bar[hidden]{display:none}
+.cs-bar-as{clip-path:polygon(40.8% 0, 100% 0, 98.4% 4.2%, 39.2% 4.2%)}
+.cs-bar-vs{clip-path:polygon(2% 95.8%, 60.4% 95.8%, 58.8% 100%, 0 100%)}
+.cs-badges{
+  position:absolute; right:6%; top:8%; z-index:2; pointer-events:none;
+  display:flex; flex-direction:column; align-items:flex-end; gap:3px;
+}
+.cs-badge{
+  font-size:10px; font-weight:800; letter-spacing:.3px; line-height:1;
+  padding:2px 4px; border-radius:2px; white-space:nowrap;
+  background:rgba(0,0,0,.78); color:var(--tier); border:1px solid var(--tier);
+}
+.cs-badge.is-best::before{content:"\2605  "}
+.cs-badge.is-work::before{content:"\2692  "}
+.cs-badge.is-easy::before{content:"\25B2  "}
+.cs-badge.is-nemesis::before{content:"\2620  "}
+
 .matchup{display:flex; align-items:center; gap:10px}
 .matchup-vs{font-size:11px; font-weight:800; color:var(--dim); letter-spacing:.5px}
 .matchup-slot{

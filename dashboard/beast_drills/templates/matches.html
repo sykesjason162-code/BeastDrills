@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills &mdash; Matches</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='matches.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='matches' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  <!--
+    The scrimmage's replacement (2026-10-16). Every real match is recorded
+    in the background, read-only -- nothing is set in the game and nothing
+    is shown in it -- and graded here afterwards. Same shape as the old
+    scrimmage page Jason asked for: the history is a picker, and the page
+    is one match examined closely.
+  -->
+  <div class="mt-picker">
+    <label><span data-t>Character</span> <select id="mt-character"></select></label>
+    <label><span data-t>Match</span> <select id="mt-match"></select></label>
+  </div>
+
+  <p class="muted" id="mt-empty" style="display:none" data-t>
+    No matches recorded yet. Play any match &mdash; Arcade, Versus, Ranked,
+    Casual, Battle Hub or a Custom Room &mdash; and it shows up here when it
+    ends. Recording only reads the game; nothing appears in game while you
+    play.
+  </p>
+
+  <div id="mt-overall"></div>
+  <div id="mt-detail"></div>
+</div>
+<script src="/static/labels.js"></script>
+<script src="/static/matches.js"></script>
+</body>
+</html>

@@ -72,13 +72,14 @@ DEFAULTS: tuple[tuple[str, str, object, str], ...] = (
      "Some drills start at half speed and work up as you improve.\n"
      "Set this to false to always play at full speed, whatever the\n"
      "drill asks for."),
-    ("scrimmage", "rounds_per_set", 3,
-     "Rounds in one scrimmage set."),
-    ("scrimmage", "max_cpu_level", 6,
-     "How high the CPU is allowed to climb.\n"
-     "Capped at 6 on purpose: levels 7 and 8 read your inputs rather\n"
-     "than reacting, so beating them teaches something that does not\n"
-     "transfer to a real opponent. Raise it if you disagree."),
+    ("matches", "max_size_mb", 50,
+     "How much disk space your recorded matches may use, in megabytes.\n"
+     "A match takes a few kilobytes, so the default 50 holds thousands.\n"
+     "When it fills up, the OLDEST matches are deleted to make room.\n"
+     "Never deleted: matches you starred on the dashboard, and your\n"
+     "overall record -- every match still counts toward it after its\n"
+     "own details are gone.\n"
+     "0 means no limit."),
 )
 
 MODS_SECTION_TEMPLATE = [

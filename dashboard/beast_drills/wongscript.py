@@ -87,7 +87,7 @@ CHARACTER_IDS = [
 
     "aki", "akuma", "ed", "elena", "m_bison", "rashid", "sagat", "terry",
 
-    "alex", "c_viper", "ingrid", "yasmine",
+    "alex", "c_viper", "ingrid", "yasmine", "arjun",
 ]
 
 REVERSAL_TYPE_TO_INT = {

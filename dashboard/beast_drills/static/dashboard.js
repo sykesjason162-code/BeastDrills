@@ -720,6 +720,9 @@ function buildCharacterSelect() {
     <button type="button" class="charselect-tile" data-character="${c}" role="option"
             aria-selected="false" title="${characterLabel(c)}">
       <img src="${characterTileUrl(c, false)}" alt="${characterLabel(c)}" loading="lazy">
+      <span class="cs-bar cs-bar-as" aria-hidden="true"></span>
+      <span class="cs-bar cs-bar-vs" aria-hidden="true"></span>
+      <span class="cs-badges"></span>
     </button>`).join("");
 
   strip.querySelectorAll(".charselect-tile").forEach((tile) => {
@@ -764,9 +767,83 @@ function renderMatchup() {
   document.querySelectorAll(".matchup-slot").forEach((slot) => {
     slot.classList.toggle("is-active", slot.dataset.slot === matchupActiveSlot);
   });
+  if (rosterFor !== matchup.player) refreshRoster();
   document.querySelectorAll("[data-slot-name]").forEach((el) => {
     const picked = matchup[el.dataset.slotName];
     el.textContent = picked ? characterLabel(picked) : "—";
+  });
+}
+
+const rosterT = (str) => (window.i18n ? window.i18n.T(str) : str);
+let rosterFor;
+let rosterSeq = 0;
+
+function tierColour(t) {
+  return `hsl(${Math.round(Math.max(0, Math.min(1, t)) * 120)} 72% 48%)`;
+}
+
+async function refreshRoster() {
+  rosterFor = matchup.player;
+  const seq = ++rosterSeq;
+  let data = null;
+  try {
+    const q = matchup.player ? "?player=" + encodeURIComponent(matchup.player) : "";
+    const r = await fetch("/api/matches/roster" + q);
+    data = r.ok ? await r.json() : null;
+  } catch { data = null; }
+  if (seq !== rosterSeq) return;
+  decorateTiles(data);
+}
+
+function decorateTiles(data) {
+  const as = (data && data.as_char) || {};
+  const vs = (data && data.vs_char) || {};
+  const pct = (r) => (r.rate == null ? "–" : r.rate + "%");
+  document.querySelectorAll(".charselect-tile").forEach((tile) => {
+    const c = tile.dataset.character;
+    const a = as[c], v = vs[c];
+    const barA = tile.querySelector(".cs-bar-as");
+    const barV = tile.querySelector(".cs-bar-vs");
+    const paint = (bar, rec) => {
+      if (!bar) return;
+      bar.hidden = !rec;
+      if (!rec) return;
+      const col = tierColour(rec.tier);
+      const fill = Math.max(12, Math.round(rec.usage * 100));
+      bar.style.background =
+        `linear-gradient(90deg, ${col} 0 ${fill}%, rgba(255,255,255,.14) ${fill}% 100%)`;
+    };
+    paint(barA, a);
+    paint(barV, v);
+
+    const badges = tile.querySelector(".cs-badges");
+    if (badges) {
+      badges.textContent = "";
+
+      const badge = (cls, rec) => {
+        const b = document.createElement("span");
+        b.className = "cs-badge " + cls;
+        b.style.setProperty("--tier", tierColour(rec.tier));
+        b.textContent = pct(rec);
+        badges.appendChild(b);
+      };
+      if (data && data.best_as === c) badge("is-best", a);
+      if (data && data.worst_as === c) badge("is-work", a);
+      if (data && data.best_vs === c) badge("is-easy", v);
+      if (data && data.worst_vs === c) badge("is-nemesis", v);
+    }
+
+    const lines = [characterLabel(c)];
+    if (data && data.best_as === c) lines.push("★ " + rosterT("Your best character"));
+    if (data && data.worst_as === c) lines.push("⚒ " + rosterT("Your character that needs the most work"));
+    if (data && data.best_vs === c) lines.push("▲ " + rosterT("The matchup you win most"));
+    if (data && data.worst_vs === c) lines.push("☠ " + rosterT("Your nemesis: the matchup you lose most"));
+    if (a) lines.push(`${rosterT("As")} ${characterLabel(c)}: ${a.wins}–${a.losses} (${pct(a)}), `
+      + `${a.matches} ${rosterT("matches")}, ${Math.round(a.share * 100)}% ${rosterT("of all you play")}`);
+    if (v) lines.push(`${rosterT("Against")} ${characterLabel(c)}`
+      + (data.player ? ` ${rosterT("as")} ${characterLabel(data.player)}` : "")
+      + `: ${v.wins}–${v.losses} (${pct(v)}), ${v.matches} ${rosterT("matches")}`);
+    tile.title = lines.join("\n");
   });
 }
 
@@ -1333,6 +1410,16 @@ function linkify(text) {
   });
 }
 
+function setSelectKeeping(selectEl, value) {
+  if (value && ![...selectEl.options].some((o) => o.value === value)) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value;
+    selectEl.appendChild(opt);
+  }
+  selectEl.value = value || "";
+}
+
 function populateSelect(selectEl, options, currentValue, blankLabel) {
   selectEl.innerHTML = `<option value="">${blankLabel}</option>` +
     options.map((o) => `<option value="${o}">${o}</option>`).join("");
@@ -1713,8 +1800,8 @@ function openEditModal(d) {
   attemptsTouched = true;
   document.getElementById("f-game-speed").value = d.game_speed ?? "";
   document.getElementById("f-reps").value = d.reps ?? "";
-  document.getElementById("f-character").value = d.character_id || "";
-  document.getElementById("f-dummy-character").value = d.dummy_character_id || "";
+  setSelectKeeping(document.getElementById("f-character"), d.character_id);
+  setSelectKeeping(document.getElementById("f-dummy-character"), d.dummy_character_id);
 
   const ts = d.training_settings || {};
 
@@ -2084,8 +2171,8 @@ function fillFormFromParsedDrill(drill) {
   attemptsTouched = true;
   document.getElementById("f-game-speed").value = drill.game_speed ?? "";
   document.getElementById("f-reps").value = drill.reps ?? "";
-  document.getElementById("f-character").value = drill.character_id || "";
-  document.getElementById("f-dummy-character").value = drill.dummy_character_id || "";
+  setSelectKeeping(document.getElementById("f-character"), drill.character_id);
+  setSelectKeeping(document.getElementById("f-dummy-character"), drill.dummy_character_id);
 
   const ts = drill.training_settings || {};
   if (typeof ts.position === "string") {

@@ -37,7 +37,7 @@ const CHARACTER_ROSTER = [
   "ryu", "luke", "jamie", "chun_li", "guile", "kimberly", "juri", "ken",
   "blanka", "dhalsim", "honda", "dee_jay", "manon", "marisa", "jp", "zangief",
   "lily", "cammy", "rashid", "aki", "ed", "akuma", "m_bison", "terry",
-  "mai", "elena", "sagat", "c_viper", "alex", "ingrid", "yasmine",
+  "mai", "elena", "sagat", "c_viper", "alex", "ingrid", "yasmine", "arjun",
 ];
 
 const COUNTER_LABELS = {

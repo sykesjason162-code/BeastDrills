@@ -118,15 +118,14 @@
       over the name and id. It is there to reach a drill you can already name, not to
       run the full query language twice in two languages.</p>
 
-      {% if scrimmage_available %}
-      <h3>Scrimmage</h3>
-      <p>Three matches against the CPU, graded on your tally rather than on wins.
-      Win all three and the difficulty goes up next time. It watches HP to work out
-      who won each match, and the Won/Lost buttons override that if it gets it wrong.
-      Afterwards it recommends drills based on what actually went badly &mdash; a
-      drill can declare what it <code>trains:</code>, and the weakest categories pull
-      those drills up the queue.</p>
-      {% endif %}
+      <h3>Matches</h3>
+      <p>Every real match you play &mdash; Arcade, Versus, Ranked, Casual, Battle Hub,
+      Custom Room &mdash; is recorded in the background and graded on the
+      <a href="/matches">Matches</a> page, round by round, on your tally rather than
+      on wins. Recording only <em>reads</em> the game: nothing is changed and nothing
+      appears in game while you play. A drill can declare what it <code>trains:</code>,
+      and the newest match puts the drills for what went worst first in your next
+      session &mdash; among drills already due, never instead of them.</p>
 
       <h3>Favorites</h3>
       <p>The star on a drill card marks it a <strong>favorite</strong>. Favorites sort
@@ -395,7 +394,7 @@ success: perfect-parry</pre>
           <tr><td><code>cpu-level:</code></td><td>Lv 1&ndash;8, for a drill whose dummy is set to CPU.</td></tr>
           <tr><td><code>counter:</code></td><td>One of <code>standard</code> (default), <code>counter</code>, <code>punish-counter</code>, <code>random</code>. Puts the dummy permanently in that counter-hit state, which is how a punish-counter combo gets practised without needing a recording for it.</td></tr>
           <tr><td><code>require-slot:</code></td><td><code>yes</code> (default) or <code>no</code>. <code>no</code> means the drill's Recording slots are <em>ambient</em> -- the dummy is doing something so you're not hitting a statue, but which slot fired has nothing to do with success. Grading then comes purely from <code>fixed-combo:</code>/<code>fixed-success:</code>.</td></tr>
-          <tr><td><code>trains:</code></td><td>Comma-separated list of the <em>Against me</em> tally categories this drill is a fix for (e.g. <code>trains: got_thrown, got_hit</code>).{% if scrimmage_available %} Scrimmage ranks what keeps happening to you and recommends the drills that claim it.{% endif %} Optional; unknown category names are rejected rather than silently ignored.</td></tr>
+          <tr><td><code>trains:</code></td><td>Comma-separated list of the <em>Against me</em> tally categories this drill is a fix for (e.g. <code>trains: got_thrown, got_hit</code>). Recorded matches rank what kept happening to you and put the drills that claim it first. Optional; unknown category names are rejected rather than silently ignored.</td></tr>
           <tr><td><code>trains-for:</code></td><td>The other half, from the <em>What I did</em> tally: the skill this drill <em>builds</em>, rather than the mistake it stops (e.g. <code>trains-for: hit_confirm</code>). Its own vocabulary, so a receiver category like <code>got_thrown</code> is rejected here &mdash; a drill cannot train <em>for</em> being thrown. Optional, and a drill may have both, one or neither.</td></tr>
           <tr><td><code>difficulty:</code></td><td>One of <code>very-easy</code>, <code>easy</code>, <code>medium</code>, <code>hard</code>, <code>very-hard</code>. Gates automatic selection, so a beginner is not handed a frame-perfect route (see <a href="#practising">Difficulty</a>). Optional &mdash; a drill without one is never gated, because unknown is not the same as hard.</td></tr>
         </tbody>
@@ -625,7 +624,6 @@ block-then-punish  =  block &gt; hit</pre>
           drill</td></tr>
           <tr><td>Tally</td><td>Start/stop, reset, the safety gate, and every counter. Also
           available as a panel &mdash; View &rarr; Tally</td></tr>
-          {% if scrimmage_available %}<tr><td>Scrimmage</td><td>Start, auto-detect toggle, and while one is running the score and Won/Lost/Cancel</td></tr>{% endif %}
           <tr><td>Options</td><td>Settings, as opposed to actions: <strong>Show Briefings</strong>,
           <strong>Reset Court When Done</strong>, draw the mouse cursor, and saving or resetting
           the window layout</td></tr>
@@ -653,8 +651,6 @@ block-then-punish  =  block &gt; hit</pre>
         rounds, the panel for watching counts move while you play.</li>
         <li><strong>Drills</strong> &mdash; the drill list, as a panel rather than a
         menu, for leaving open while you work through a session. <strong>Numpad5</strong>.</li>
-        {% if scrimmage_available %}<li><strong>Scrimmage</strong> &mdash; the running score and the Won/Lost
-        buttons. <strong>Numpad6</strong>.</li>{% endif %}
       </ul>
       <p>Two more appear only when they have something to say: the
       <strong>briefing</strong> before a drill, and <strong>Drill Complete</strong>
@@ -707,7 +703,6 @@ block-then-punish  =  block &gt; hit</pre>
           <tr><td>Numpad3</td><td>Start / stop the tally</td></tr>
           <tr><td>Numpad4</td><td>Reset the tally</td></tr>
           <tr><td>Numpad5</td><td>Show / hide the drills panel</td></tr>
-          {% if scrimmage_available %}<tr><td>Numpad6</td><td>Show / hide the scrimmage panel</td></tr>{% endif %}
           <tr><td>Numpad7</td><td>Open the dashboard in a browser</td></tr>
           <tr><td>Numpad8</td><td>Save the current setup as a drill</td></tr>
           <tr><td>Numpad9</td><td>Show / hide the tally panel</td></tr>

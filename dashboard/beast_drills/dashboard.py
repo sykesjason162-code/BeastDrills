@@ -19,14 +19,14 @@ import logging
 import time
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, redirect, render_template, request
 
 from . import (attempts, criteria, dashboard_data, database, deck, drill_search,
-               duplicates,
+               duplicates, matches,
                outbox_writer, response_check, reviews_db, scheduler, wongscript)
 
 from .live_status import player_character
-from . import features, paths, settings
+from . import paths, settings
 from .service import DEFAULT_DATA_DIR
 
 log = logging.getLogger("beast_drills.dashboard")
@@ -97,10 +97,6 @@ def create_app(data_dir) -> Flask:
 
     app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-    @app.context_processor
-    def _features():
-        return {"scrimmage_available": features.scrimmage_available()}
-
     @app.get("/")
     def index():
         return render_template("index.html")
@@ -118,12 +114,15 @@ def create_app(data_dir) -> Flask:
 
         return render_template("stats.html")
 
+    @app.get("/matches")
+    def matches_page():
+
+        return render_template("matches.html")
+
     @app.get("/scrimmage")
     def scrimmage_page():
 
-        if not features.scrimmage_available():
-            return "Not part of this release.", 404
-        return render_template("scrimmage.html")
+        return redirect("/matches", code=301)
 
     @app.get("/profile")
     def profile_page():
@@ -441,6 +440,10 @@ def create_app(data_dir) -> Flask:
             "slot_outcomes": body.get("slot_outcomes"),
             "fixed_expected_response": body.get("fixed_expected_response"),
 
+            "expected_setup": body.get("expected_setup"),
+            "against_criteria": body.get("against_criteria"),
+            "survive_seconds": body.get("survive_seconds"),
+
             **({"fixed_expected_combo": body["fixed_expected_combo"]}
                if "fixed_expected_combo" in body else {}),
             "response_window_frames": body.get("response_window_frames"),
@@ -457,6 +460,15 @@ def create_app(data_dir) -> Flask:
         outbox_writer.write_outbox_event(
             outbox_dir, {"event": "update_drill_request", "drill_id": drill_id, "patch": patch}
         )
+        return jsonify({"queued": True}), 202
+
+    @app.post("/api/matches/<match_id>/favorite")
+    def favorite_match(match_id):
+
+        body = request.get_json(silent=True) or {}
+        outbox_writer.write_outbox_event(outbox_dir, {
+            "event": "favorite_match_request", "match_id": match_id,
+            "favorite": bool(body.get("favorite", True))})
         return jsonify({"queued": True}), 202
 
     @app.delete("/api/drills/<drill_id>")
@@ -565,19 +577,23 @@ def create_app(data_dir) -> Flask:
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         return jsonify(dashboard_data.compute_overview(db, now_iso, _character_arg()))
 
-    @app.get("/api/scrimmage")
-    def scrimmage_state():
+    @app.get("/api/matches")
+    def matches_state():
 
-        if not features.scrimmage_available():
-            return jsonify({"error": "not_in_this_release"}), 404
-        db = _load_db_or_none(db_path)
-        if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
-        state = db.get("scrimmage") or {}
-        wanted = request.args.get("character")
-        if wanted:
-            return jsonify({wanted: state.get(wanted)} if wanted in state else {})
-        return jsonify(state)
+        try:
+            limit = max(1, min(500, int(request.args.get("limit") or 100)))
+        except ValueError:
+            limit = 100
+        rows = reviews_db.recent_matches(stats_db_path, limit, _character_arg())
+
+        return jsonify({"matches": matches.view(rows),
+                        "overall": matches.overall(reviews_db.match_totals(stats_db_path))})
+
+    @app.get("/api/matches/roster")
+    def matches_roster():
+
+        player = request.args.get("player") or None
+        return jsonify(matches.roster(reviews_db.match_totals(stats_db_path), player))
 
     @app.get("/api/locales")
     def locales():

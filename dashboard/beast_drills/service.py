@@ -46,8 +46,8 @@ from . import (
     dashboard_data,
     database,
     deck,
-    difficulty,
     duplicates,
+    matches,
     game_speed,
     grader,
     response_check,
@@ -58,12 +58,10 @@ from . import (
     wongscript,
     response_window,
     reviews_db,
-    scrimmage,
     scheduler,
+    scoring,
     session_result,
 )
-
-DASHBOARD_PORT = 8765
 
 log = logging.getLogger("beast_drills")
 
@@ -151,7 +149,8 @@ class Service:
         self.inbox_path = paths.inbox(data_dir)
         self.live_status_path = paths.live_status(data_dir)
         self.db_path = paths.database(data_dir)
-        self.example_db_path = paths.example_database(data_dir)
+
+        self.example_db_path = paths.example_database(self.install_dir)
 
         self.stats_db_path = paths.stats_db(data_dir)
         cfg = settings.load(DEFAULT_DATA_DIR)
@@ -162,9 +161,7 @@ class Service:
         self.allow_slow_start = cfg[("practice", "allow_slow_start")]
         self.default_reps = cfg[("practice", "reps")]
 
-        scrimmage.configure(
-            rounds_per_set=cfg[("scrimmage", "rounds_per_set")],
-            max_cpu_level=cfg[("scrimmage", "max_cpu_level")])
+        self.match_limit_bytes = max(0, cfg[("matches", "max_size_mb")]) * 1024 * 1024
 
         self._sessions_in_progress: dict[str, list[int]] = {}
 
@@ -177,12 +174,15 @@ class Service:
         self._progress_path = paths.session_progress(self.data_dir)
         self._restore_progress()
 
-        self._scrimmage_rounds: dict[str, list] = {}
-
     def _load_db(self) -> dict:
         data, err = database.load(self.db_path)
         if data is not None:
             return data
+
+        if self.db_path.exists():
+            raise RuntimeError(
+                f"shared_database.json exists but could not be read, and was "
+                f"left untouched: {err}")
         example, ex_err = database.load(self.example_db_path)
         if example is None:
             raise RuntimeError(f"no database and no example to bootstrap from: {ex_err}")
@@ -237,6 +237,15 @@ class Service:
         else:
             log.info("retimed recorded tapes for dummy=%s", dummy)
 
+    @staticmethod
+    def _with_reason(drill, db, played_as, dummy):
+
+        if drill is not None:
+            why = scoring.reason_for(db, drill.get("id"), played_as, dummy)
+            if why:
+                drill["match_reason"] = why
+        return drill
+
     def _prepare_due(self, drill: dict | None) -> dict | None:
         if drill is None:
             return None
@@ -276,23 +285,18 @@ class Service:
         played_as = live_status.player_character(self.live_status_path)
 
         dummy = live_status.dummy_character(self.live_status_path)
+
+        recommended = scoring.latest_recommendations(db, played_as, dummy)
         next_drill = deck.select_next_drill(
-            deck.get_due_drills(db, now_iso, played_as, dummy))
+            deck.get_due_drills(db, now_iso, played_as, dummy), recommended)
 
         next_favorite = deck.select_next_drill(
-            deck.get_due_drills(db, now_iso, played_as, dummy, favorites_only=True))
-
+            deck.get_due_drills(db, now_iso, played_as, dummy, favorites_only=True),
+            recommended)
         payload = {
             "heartbeat": time.time(),
-            "due_drill": self._prepare_due(next_drill),
-            "due_favorite": self._prepare_due(next_favorite),
-            "scrimmage_cpu_level": scrimmage.level_for(
-                db.get("scrimmage"), played_as or "", dummy or ""),
-
-            "scrimmage_difficulty": difficulty.parameters_for(
-                scrimmage.level_for(db.get("scrimmage"), played_as or "", dummy or ""),
-                ((db.get("scrimmage") or {}).get(played_as or "", {})
-                 .get(dummy or "", {}).get("handicap") or 0)),
+            "due_drill": self._with_reason(self._prepare_due(next_drill), db, played_as, dummy),
+            "due_favorite": self._with_reason(self._prepare_due(next_favorite), db, played_as, dummy),
 
             "dashboard_url": self.dashboard_url,
         }
@@ -789,7 +793,8 @@ class Service:
     def _handle_open_dashboard(self) -> None:
 
         import webbrowser
-        url = f"http://localhost:{DASHBOARD_PORT}"
+
+        url = self.dashboard_url
         try:
             webbrowser.open(url)
             log.info("opened the dashboard: %s", url)
@@ -938,155 +943,79 @@ class Service:
                      "dealt" if root == "hit_zones_dealt" else "taken",
                      character_id, dummy_id, side, delta)
 
-    SCRIMMAGE_HISTORY_LIMIT = 20
+    def _handle_match_round(self, event: dict, db: dict) -> None:
 
-    def _handle_scrimmage_round(self, event: dict, db: dict) -> None:
-
-        session_id = event.get("session_id") or "scrimmage"
-        character_id = event.get("character_id") or "unknown"
-        tally = event.get("tally") or {}
-        won = event.get("won")
-
-        analysis = scrimmage.analyse_round(
-            tally, db.get("drills") or [], character_id, won)
-        rounds = self._scrimmage_rounds.setdefault(session_id, [])
-        rounds.append({"tally": tally, "won": bool(won),
-                       "score": analysis["score"],
-
-                       "exchanges": analysis["exchanges"],
-                       "worst": analysis["worst"],
-                       "worst_count": analysis["worst_count"]})
-        analysis["round"] = len(rounds)
-        analysis["rounds_total"] = scrimmage.ROUNDS_PER_SET
-        analysis["session_id"] = session_id
-
-        tmp = (paths.last_scrimmage_round(self.data_dir)).with_suffix(".json.tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(analysis, f, indent=4)
-        paths.atomic_replace(tmp, paths.last_scrimmage_round(self.data_dir))
-        log.info("scrimmage round %d/%d for %s: won=%s score=%s worst=%s",
-                 len(rounds), scrimmage.ROUNDS_PER_SET, character_id,
-                 won, analysis["score"], analysis["worst"])
-
-    def _handle_scrimmage_concluded(self, event: dict, db: dict) -> None:
-
-        character_id = event.get("character_id") or "unknown"
-        session_id = event.get("session_id") or "scrimmage"
-
-        rounds = self._scrimmage_rounds.pop(session_id, [])
-        if rounds:
-            summary = scrimmage.summarise_set(
-                rounds, db.get("drills") or [], character_id)
-            tally = summary["tally"]
-            results = summary["results"]
-        else:
-            summary = None
-            tally = event.get("tally") or {}
-            results = event.get("match_results") or event.get("round_results") or []
-
-        dummy_id = event.get("dummy_character_id") or "unknown"
-        state = (db.setdefault("scrimmage", {})
-                   .setdefault(character_id, {})
-                   .setdefault(dummy_id,
-                               {"difficulty": scrimmage.MIN_DIFFICULTY, "sessions": []}))
-        before = int(state.get("difficulty") or scrimmage.MIN_DIFFICULTY)
-        before_handicap = int(state.get("handicap") or 0)
-
-        outcomes = list(results)[:scrimmage.ROUNDS_PER_SET]
-        wins = sum(1 for r in outcomes if r)
-        if len(outcomes) < scrimmage.ROUNDS_PER_SET:
-            after, after_handicap, outcome = before, before_handicap, "incomplete"
-        elif wins == scrimmage.ROUNDS_PER_SET:
-            after, after_handicap = difficulty.harder(before, before_handicap)
-            outcome = "advanced"
-        elif wins == 0:
-            after, after_handicap = difficulty.easier(before, before_handicap)
-            outcome = "dropped"
-        else:
-            after, after_handicap, outcome = before, before_handicap, "held"
-        if (after, after_handicap) == (before, before_handicap) and outcome != "incomplete":
-            outcome = "held"
-
-        scored = scrimmage.score_tally(
-            tally,
-            giver_keys=event.get("giver_keys"),
-            receiver_keys=event.get("receiver_keys"),
-        )
-        drills = db.get("drills") or []
-        assigned = scrimmage.recommend_drills(tally, drills, character_id=character_id)
-        unmet = scrimmage.unaddressed_weaknesses(tally, drills, character_id=character_id)
-
-        state["difficulty"] = after
-        state["handicap"] = after_handicap
-        state["sessions"].append({
-            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "match_results": list(results),
-            "round_results": list(results),
-            "per_round_scores": (summary or {}).get("per_round_scores"),
-            "difficulty_before": before,
-            "difficulty_after": after,
-            "handicap_before": before_handicap,
-            "handicap_after": after_handicap,
-            "outcome": outcome,
-            "score": scored["score"],
-            "buckets": scored["buckets"],
-            "exchanges": scored["exchanges"],
-
-            "giver_events": scored["giver_events"],
-            "receiver_events": scored["receiver_events"],
-            "weaknesses": [{"weakness": k, "count": n}
-                           for k, n in scrimmage.rank_weaknesses(tally)],
-
-            "rounds": [{"round": i + 1, "won": r.get("won"),
-                        "score": r.get("score"),
-                        "exchanges": r.get("exchanges"),
-                        "worst": r.get("worst"),
-                        "worst_count": r.get("worst_count"),
-                        "weaknesses": [{"weakness": k, "count": n}
-                                       for k, n in scrimmage.rank_weaknesses(
-                                           r.get("tally") or {})][:5]}
-                       for i, r in enumerate(rounds)],
-            "recommendations": assigned,
-            "unaddressed": [{"weakness": k, "count": n} for k, n in unmet],
-        })
-
-        state["sessions"] = state["sessions"][-self.SCRIMMAGE_HISTORY_LIMIT:]
-
-        payload = {
-            "session_id": session_id,
-            "character_id": character_id,
-            "dummy_character_id": dummy_id,
-            "rounds": len(results),
-            "won": sum(1 for r in results if r),
-            "score": scored["score"],
-            "difficulty_before": before,
-            "difficulty_after": after,
-            "handicap_before": before_handicap,
-            "handicap_after": after_handicap,
-            "outcome": outcome,
-            "recommendations": assigned,
-            "lines": scrimmage.set_lines(
-                summary or {"rounds": len(results),
-                            "won": sum(1 for r in results if r),
-                            "score": scored["score"],
-                            "per_round_scores": None,
-                            "weaknesses": scrimmage.rank_weaknesses(tally),
-                            "recommendations": assigned,
-                            "unaddressed": [(k, n) for k, n in unmet]},
-                before, after, before_handicap, after_handicap, outcome),
-        }
-        tmp = (paths.last_scrimmage_set(self.data_dir)).with_suffix(".json.tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=4)
-        paths.atomic_replace(tmp, paths.last_scrimmage_set(self.data_dir))
-
-        ok, err = database.save(self.db_path, db)
+        if not event.get("match_id"):
+            log.warning("match_round without a match_id, discarding")
+            return
+        graded = matches.grade_round(event, db.get("drills") or [])
+        ok, err = reviews_db.record_match_round(
+            self.stats_db_path, int(event.get("timestamp") or time.time()), graded)
         if not ok:
-            log.error("failed saving database after scrimmage_concluded: %s", err)
-        else:
-            log.info("scrimmage %s vs %s score=%s %s %d->%d assigned=%d",
-                     character_id, dummy_id, scored["score"], outcome,
-                     before, after, len(assigned))
+            log.error("failed recording match round: %s", err)
+            return
+        log.info("match %s round %d (%s): you=%s side=%s by=%s self=%s members=%s "
+                 "won=%s score=%s worst=%s%s",
+                 graded["match_id"], graded["round"], matches.mode_name(graded["mode"]),
+                 graded["character_id"], graded["player_side"], graded["side_by"],
+                 event.get("self_member"), event.get("members"),
+                 graded["won"], graded["score"], graded["worst"],
+                 " (right side, mirrored)" if graded["mirrored"] else "")
+
+    def _handle_favorite_match(self, event: dict) -> None:
+
+        ok, err = reviews_db.set_match_favorite(
+            self.stats_db_path, str(event.get("match_id") or ""),
+            bool(event.get("favorite", True)))
+        if not ok:
+            log.warning("could not change match favourite: %s", err)
+
+    def _prune_matches(self) -> None:
+
+        try:
+            removed = reviews_db.prune_matches(self.stats_db_path, self.match_limit_bytes)
+        except Exception as e:
+            log.error("could not trim old matches: %s", e)
+            return
+        if removed:
+            log.info("match log over %d MB: removed the %d oldest match(es)",
+                     self.match_limit_bytes // (1024 * 1024), removed)
+
+    def _handle_match_end(self, event: dict, db: dict) -> None:
+
+        match_id = event.get("match_id")
+        if not match_id:
+            log.warning("match_end without a match_id, discarding")
+            return
+        rounds = reviews_db.match_rounds(self.stats_db_path, match_id)
+        graded = matches.grade_match(event, rounds, db.get("drills") or [])
+        ok, err = reviews_db.record_match(
+            self.stats_db_path, int(event.get("timestamp") or time.time()), graded, rounds)
+        if not ok:
+            log.error("failed recording match: %s", err)
+            return
+        self._prune_matches()
+
+        exchanges = sum(int(r.get("exchanges") or 0) for r in rounds)
+        if graded["player_side"] is not None and graded["character_id"] and exchanges > 0:
+            slot = (db.setdefault("matches", {})
+                      .setdefault(graded["character_id"], {})
+                      .setdefault(graded["opponent_id"] or "unknown", {}))
+            slot["latest"] = {
+                "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "match_id": match_id,
+                "mode": graded["mode"],
+                "won": graded["won"],
+                "score": graded["score"],
+                "recommendations": graded["recommendations"],
+            }
+            ok, err = database.save(self.db_path, db)
+            if not ok:
+                log.error("failed saving match feedback: %s", err)
+        log.info("match %s over (%s, %s): %d-%d won=%s score=%s, %d recommended",
+                 match_id, matches.mode_name(graded["mode"]), graded["how"],
+                 graded["wins"], graded["losses"], graded["won"], graded["score"],
+                 len(graded["recommendations"]))
 
     def _handle_create_drill(self, event: dict, db: dict) -> None:
 
@@ -1099,7 +1028,12 @@ class Service:
             final_id = f"{base_id}_{n}"
             n += 1
         drill["id"] = final_id
-        drill.setdefault("created_at", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        drill.setdefault("created_at", now)
+
+        for key, value in scheduler.STARTING_STATE.items():
+            drill.setdefault(key, value)
+        drill.setdefault("next_review", now)
         db.setdefault("drills", []).append(drill)
         ok, err = database.save(self.db_path, db)
         if not ok:
@@ -1230,10 +1164,12 @@ class Service:
                     self._handle_hit_zone_delta(event, db)
                 elif kind == "tally_recorded":
                     self._handle_tally_recorded(event)
-                elif kind == "scrimmage_round":
-                    self._handle_scrimmage_round(event, db)
-                elif kind == "scrimmage_concluded":
-                    self._handle_scrimmage_concluded(event, db)
+                elif kind == "match_round":
+                    self._handle_match_round(event, db)
+                elif kind == "match_end":
+                    self._handle_match_end(event, db)
+                elif kind == "favorite_match_request":
+                    self._handle_favorite_match(event)
                 else:
                     log.warning("unknown outbox event kind=%r in %s, discarding", kind, path.name)
             except (OSError, json.JSONDecodeError, KeyError) as e:
@@ -1249,6 +1185,8 @@ class Service:
 
         self.outbox_dir.mkdir(parents=True, exist_ok=True)
         log.info("beast_drills running against %s", self.data_dir)
+
+        self._prune_matches()
         try:
             while True:
                 try:

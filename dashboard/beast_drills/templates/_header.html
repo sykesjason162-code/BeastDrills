@@ -70,11 +70,10 @@
          href="/drills" style="--nav-icon:url('/static/sf6/icon_cfn.png')" data-t>Drills</a>
       <a class="bd-nav-item{% if active == 'stats' %} is-active{% endif %}"
          href="/stats" style="--nav-icon:url('/static/sf6/top_icon_information.png')" data-t>Stats</a>
-      {# Shelved for the beta -- see features.scrimmage_available. #}
-      {% if scrimmage_available %}
-      <a class="bd-nav-item{% if active == 'scrimmage' %} is-active{% endif %}"
-         href="/scrimmage" style="--nav-icon:url('/static/sf6/icon_cfn.png')" data-t>Scrimmage</a>
-      {% endif %}
+      {# Replaced the Scrimmage item on 2026-10-16: every real match is
+         recorded read-only and graded there. See dashboard.matches_page. #}
+      <a class="bd-nav-item{% if active == 'matches' %} is-active{% endif %}"
+         href="/matches" style="--nav-icon:url('/static/sf6/icon_cfn.png')" data-t>Matches</a>
       <a class="bd-nav-item{% if active == 'profile' %} is-active{% endif %}"
          href="/profile" style="--nav-icon:url('/static/sf6/icon_profile.png')" data-t>Profile</a>
     </nav>

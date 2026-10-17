@@ -22,7 +22,9 @@ you have down. The scheduling is the same idea Anki uses; the grading reads
 the game's own state, so a counter hit counts because the game says it was
 one.
 
-It runs entirely on your machine, in offline Training Mode.
+It runs entirely on your machine. Drills run in offline Training Mode;
+your real matches are only **read**, to grade them afterwards — see
+[Safety](#safety).
 
 ![Your profile: drills, sessions, success rate and best streak for each character](https://raw.githubusercontent.com/sykesjason162-code/BeastDrills/main/screenshots/profile.jpg)
 
@@ -96,6 +98,19 @@ Whichever you use, these land in your Street Fighter 6 folder:
 somewhere else, it cannot. To find the folder, right-click Street Fighter 6
 in Steam → Manage → Browse local files.
 
+### Uninstalling
+
+**If you installed through Vortex, untick Beast Drills in Fluffy first.**
+Vortex hands Street Fighter 6 mods to Fluffy Mod Manager, and Fluffy is
+what puts the files in the game folder. Disabling the mod in Vortex only
+takes the zip back out of Fluffy's folder; the installed files stay. So:
+open Fluffy, untick Beast Drills, close Fluffy, then disable or remove it
+in Vortex.
+
+Installed by hand: delete `reframework\plugins\managed\BeastDrills.dll`,
+`reframework\data\BeastDrills_data\`, `dashboard\` and the two `.bat`
+files. Your drills in `Documents\Beast Drills` are not touched either way.
+
 ## Running it
 
 1. Double-click **`Start Beast Drills.bat`** in the game folder. It runs in
@@ -126,6 +141,10 @@ a fresh one.
 You would change it to:
 
 - **use a different port**, if something else already has 8765
+- **cap how much space recorded matches use**, with `max_size_mb` under
+  `[matches]` -- the oldest are cleared first, starred ones never are.
+  An ini from an earlier version will not have this line; add it under a
+  `[matches]` heading, or delete the file to get a fresh one.
 - **watch your stats from your phone**, by setting `host = 0.0.0.0` (only
   on a network you trust -- there is no password)
 - **run the dashboard on another computer** -- see below
@@ -197,6 +216,17 @@ That is the whole loop. Everything below is optional.
   they did to you — across a session or a whole practice night.
 - **The dashboard** is where you read your record and write new drills. It
   has its own help page, linked in the header.
+- **Matches.** Every real match you play — Arcade, Versus, Ranked, Casual,
+  Battle Hub, Custom Room — is recorded in the background and graded on
+  the dashboard's **Matches** page, round by round. The newest one decides
+  which due drills come first in your next session: a drill that works in
+  Training Mode but keeps failing you in matches is exactly the one to
+  practise. Nothing to start and nothing on screen; just play. The
+  briefing says when a drill is next because of your last match.
+  Your **overall** record keeps every match forever; the round-by-round
+  detail of old matches is cleared once it passes a size you choose (50 MB
+  by default, thousands of matches -- see Settings). **Star** a match to
+  keep its detail for good.
 
 ### Hotkeys
 
@@ -220,10 +250,24 @@ That is the whole loop. Everything below is optional.
 
 Beast Drills only writes to the game in **local, offline Training Mode**,
 and it re-checks that every single frame rather than once at startup. If the
-check fails it does nothing at all. Nothing it does is available online, and
-it never touches an online mode.
+check fails it writes nothing at all. Online matches, Online Training,
+Battle Hub, replays and spectating are all refused, and if it cannot tell
+which mode the game is in, it refuses too.
 
 That check is deliberately the strictest part of the whole thing.
+
+**During a match, including an online one, it only reads.** To grade your
+matches it reads who won each round, how, and the same hit/block/throw
+events the tally counts, and saves them on your PC for the dashboard. It
+never changes anything in a match, and while an online match is on it
+draws nothing on screen and ignores its hotkeys, so nothing it knows can
+be seen mid-match.
+
+Be clear-eyed about what that is: REFramework itself is a third-party
+tool that Capcom has not approved, and reading the game during an online
+match is still running a mod while you play online. Capcom has not said
+anything about client-side mods either way, and the community reading is
+that read-only mods are not acted on — but nobody can promise that.
 
 ---
 
@@ -275,10 +319,6 @@ for `BeastDrills.dll` under `reframework\plugins\managed\`. Then open
 
 ## Known issues in this beta
 
-- **No scrimmage yet.** The CPU scrimmage — three matches that test
-  whether a drill holds up against an opponent — is held back from this
-  beta. In testing, a recording drill run after a scrimmage would not play
-  until the game was restarted. It returns once that is fixed.
 - **Stop your session before you queue for a match.** Queueing Ranked or
   Casual from Training Mode takes you to the match and back. Beast Drills
   stops writing to the game as soon as it detects an online match, but it

@@ -226,6 +226,71 @@
     "{p}% mid hits. No mix-up required, apparently.",
   ];
 
+  const LAST_MATCH_DRILL = [
+    "Last match: {w} x{n}. \"{d}\" jumps the queue whenever it is due. Coincidence? No.",
+    "You ate {w} {n} times last match. \"{d}\" now cuts in line when it comes up.",
+    "{w} x{n} last match. \"{d}\" has been promoted. The lab is petty like that.",
+    "Your last match filed a complaint: {w} x{n}. \"{d}\" is the remedy, first in line when due.",
+  ];
+
+  const LAST_MATCH_NO_DRILL = [
+    "Last match: {w} x{n}, and not one drill trains it. Time to write one.",
+    "{w} x{n} last match. Your deck has no answer. Yet.",
+    "Nothing in your deck fixes {w} ({n} last match). That is a drill-shaped hole.",
+  ];
+
+  const MATCH_RECORD = [
+    "{w}-{l} across {m} recorded matches. The lab remembers every one.",
+    "Recorded record: {w} wins, {l} losses. Every loss is a drill waiting to happen.",
+    "{m} matches on the books. {w} of them went your way. Onward.",
+  ];
+
+  const BEST_CHAR = [
+    "{c} wins {p}% of your matches. Everyone else on your roster is a hobby.",
+    "Your {c} is at {p}%. Whatever you do there, try doing it with the others.",
+    "{c}: {p}% win rate. Capcom would like a word about balance.",
+    "{p}% with {c}. Frame it. Hang it in the lab.",
+  ];
+
+  const WORST_CHAR = [
+    "{c} wins {p}% of the time. That is not a main, that is a cry for help.",
+    "Your {c} sits at {p}%. The lab is open 24 hours. Just saying.",
+    "{p}% with {c}. Bold to keep picking them. Respect. Sort of.",
+    "{c} at {p}%. Somewhere a {c} main just felt a disturbance.",
+  ];
+
+  const NEMESIS = [
+    "{o} has a {q}% record against you. Rent is due.",
+    "Against {o} you are {w}-{l}. Somewhere, a {o} main is telling this story.",
+    "You win {p}% against {o}. They have your number, and they call it often.",
+    "{o}: {w}-{l}. Not a matchup. A recurring nightmare with health bars.",
+  ];
+
+  const EASY_PREY = [
+    "You beat {o} {p}% of the time. They are scared of you. As they should be.",
+    "{o}: {w}-{l}. You have them on speed dial.",
+    "{p}% against {o}. At this point it is a mentorship.",
+  ];
+
+  const MOST_USED = [
+    "{p}% of your matches are {c}. Loyalty or fear? We may never know.",
+    "{c} again? {p}% of everything you play. They deserve a holiday.",
+    "{p}% {c}. The rest of the roster has started a support group.",
+  ];
+
+  const TOP_WEAKNESS = [
+    "Across every recorded match, {w} is your #1 problem. {n} times. It has a fan club now.",
+    "{w}: {n} times in your matches. At this point it is a lifestyle.",
+    "Your matches agree on one thing: {w} ({n}). There is a drill for that. Probably.",
+    "{n} x {w}. Your opponents have noticed. Trust me.",
+  ];
+
+  const TOP_STRENGTH = [
+    "Your best habit: {w}, {n} times across your matches. Keep doing that. Specifically that.",
+    "{n} x {w}. Whatever else is going wrong, that part works.",
+    "{w}, {n} times. Your opponents have it in their nightmares, filed under you.",
+  ];
+
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
   const cheese = () =>
@@ -247,9 +312,58 @@
     } catch { return null; }
   }
 
-  function suggestions(overview, zones, drills, live) {
+  function suggestions(overview, zones, drills, live, matchData, roster) {
     const out = [];
     const n = (v) => (v || 0);
+    const words = (k) => String(k || "").replace(/_/g, " ");
+
+    const GENERIC = new Set(["hit", "hit_high", "hit_mid", "hit_low",
+      "got_hit", "got_hit_high", "got_hit_mid", "got_hit_low"]);
+    const telling = (list, key) => (list || []).find((x) => !GENERIC.has(x[key || "weakness"]));
+
+    const last = ((matchData && matchData.matches) || [])
+      .find((m) => m.finished && m.player_side != null);
+    if (last) {
+      const rec = (last.recommendations || [])[0];
+      const gap = telling(last.unaddressed);
+      if (rec) {
+        out.push(say("LAST_MATCH_DRILL", LAST_MATCH_DRILL,
+          { w: words(rec.weakness), n: rec.weakness_count, d: rec.name || rec.drill_id }));
+      } else if (gap) {
+        out.push(say("LAST_MATCH_NO_DRILL", LAST_MATCH_NO_DRILL,
+          { w: words(gap.weakness), n: gap.count }));
+      }
+    }
+    const all = matchData && matchData.overall && matchData.overall.all;
+    if (all && n(all.matches) >= 5) {
+      out.push(say("MATCH_RECORD", MATCH_RECORD, { w: all.wins, l: all.losses, m: all.matches }));
+      const weak = telling(all.weaknesses);
+      if (weak && n(weak.count) >= 10)
+        out.push(say("TOP_WEAKNESS", TOP_WEAKNESS, { w: words(weak.weakness), n: weak.count }));
+      const strong = telling(all.strengths);
+      if (strong && n(strong.count) >= 10)
+        out.push(say("TOP_STRENGTH", TOP_STRENGTH, { w: words(strong.weakness), n: strong.count }));
+    }
+
+    if (roster) {
+      const as = roster.as_char || {}, vs = roster.vs_char || {};
+      const rate = (r) => (r && r.rate != null ? r.rate : null);
+      if (roster.best_as && rate(as[roster.best_as]) != null)
+        out.push(say("BEST_CHAR", BEST_CHAR, { c: label(roster.best_as), p: rate(as[roster.best_as]) }));
+      if (roster.worst_as && rate(as[roster.worst_as]) != null)
+        out.push(say("WORST_CHAR", WORST_CHAR, { c: label(roster.worst_as), p: rate(as[roster.worst_as]) }));
+      const nem = roster.worst_vs && vs[roster.worst_vs];
+      if (nem && rate(nem) != null)
+        out.push(say("NEMESIS", NEMESIS, { o: label(roster.worst_vs), p: rate(nem),
+          q: 100 - rate(nem), w: nem.wins, l: nem.losses }));
+      const prey = roster.best_vs && vs[roster.best_vs];
+      if (prey && rate(prey) != null)
+        out.push(say("EASY_PREY", EASY_PREY, { o: label(roster.best_vs), p: rate(prey),
+          w: prey.wins, l: prey.losses }));
+      const top = Object.entries(as).sort((a, b) => b[1].matches - a[1].matches)[0];
+      if (top && n(roster.total) >= 5 && top[1].share >= 0.5)
+        out.push(say("MOST_USED", MOST_USED, { c: label(top[0]), p: Math.round(top[1].share * 100) }));
+    }
 
     if (overview) {
       if (n(overview.due_now) > 0) out.push(say("DUE", DUE, { n: overview.due_now }));
@@ -371,14 +485,16 @@
     setInterval(show, 11000);
 
     (async () => {
-      const [overview, zones, drills, live] = await Promise.all([
+      const [overview, zones, drills, live, matchData, roster] = await Promise.all([
         getJSON("/api/stats/overview"),
         getJSON("/api/stats/hit_zones"),
         getJSON("/api/drills"),
         getJSON("/api/live"),
+        getJSON("/api/matches?limit=5"),
+        getJSON("/api/matches/roster"),
       ]);
       const list = Array.isArray(drills) ? drills : (drills && drills.drills) || [];
-      const real = suggestions(overview, zones, list, live);
+      const real = suggestions(overview, zones, list, live, matchData, roster);
       if (!real.length) return;
       lines = [...real, ...shuffled(cheese())];
       i = 0;

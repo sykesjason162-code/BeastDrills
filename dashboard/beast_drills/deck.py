@@ -1,4 +1,4 @@
-from . import progress, scrimmage
+from . import progress, scoring
 
 DIFFICULTY_ORDER = ["very-easy", "easy", "medium", "hard", "very-hard"]
 
@@ -80,12 +80,17 @@ def get_due_drills(database: dict, now: str, character_id: str | None = None,
         ):
             due.append(drill)
 
-    return scrimmage.reorder_by_recommendations(
-        due, scrimmage.latest_recommendations(database, character_id,
-                                              dummy_character_id))
+    return scoring.reorder_by_recommendations(
+        due, scoring.latest_recommendations(database, character_id,
+                                            dummy_character_id))
 
-def select_next_drill(due_drills: list) -> dict | None:
+def select_next_drill(due_drills: list, recommended=None) -> dict | None:
 
+    if recommended:
+        by_id = {d.get("id"): d for d in due_drills}
+        for drill_id in recommended:
+            if drill_id in by_id:
+                return by_id[drill_id]
     selected = None
     for drill in due_drills:
         if selected is None or drill["next_review"] < selected["next_review"]:

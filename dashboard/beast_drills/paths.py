@@ -85,12 +85,6 @@ def last_rep_result(data_dir) -> Path:
 def last_session_result(data_dir) -> Path:
     return _p(data_dir, RUNTIME, "last_session_result.json")
 
-def last_scrimmage_round(data_dir) -> Path:
-    return _p(data_dir, RUNTIME, "last_scrimmage_round.json")
-
-def last_scrimmage_set(data_dir) -> Path:
-    return _p(data_dir, RUNTIME, "last_scrimmage_set.json")
-
 def service_log(data_dir) -> Path:
     return _p(data_dir, LOGS, "service.log")
 
@@ -153,6 +147,7 @@ REFERENCE_FOLDERS = (
     "enum_names",
     "frame_data",
     "frame_data_connected",
+    "frame_data_official",
     "locales",
     "mods",
     "reversal_skills",

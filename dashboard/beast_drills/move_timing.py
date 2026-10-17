@@ -9,6 +9,8 @@ _FRAME_DATA_DIR_NAME = "frame_data"
 
 _CONNECTED_DIR_NAME = "frame_data_connected"
 
+_OFFICIAL_DIR_NAME = "frame_data_official"
+
 _cache: dict = {}
 
 _RANGE_ONLY = re.compile(r"^\s*(\d+)\s*~\s*(\d+)\s*$")
@@ -68,6 +70,31 @@ def _load_connected(character_id: str, data_dir: Path) -> dict:
     _cache[key] = table
     return table
 
+def _load_official(character_id: str, data_dir: Path) -> dict:
+
+    key = ("official", character_id, str(data_dir))
+    if key in _cache:
+        return _cache[key]
+    path = paths.reference_dir(data_dir, _OFFICIAL_DIR_NAME) / f"{character_id}.json"
+    table: dict = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+        for move in payload.get("moves") or []:
+            if move.get("variant") or not move.get("match"):
+                continue
+            table.setdefault(_normalize(move["match"]), move)
+    except (OSError, ValueError):
+        table = {}
+    _cache[key] = table
+    return table
+
+def official(character_id: str, notation: str, data_dir: Path):
+
+    if not character_id or not notation:
+        return None
+    return _load_official(character_id, data_dir).get(_normalize(notation))
+
 def connected_duration(character_id: str, notation: str, data_dir: Path):
 
     if not character_id or not notation:
@@ -92,6 +119,9 @@ def find(character_id: str, notation: str, data_dir: Path):
 
 def duration(character_id: str, notation: str, data_dir: Path):
 
+    off = official(character_id, notation, data_dir)
+    if off and isinstance(off.get("total_n"), int) and off["total_n"] > 0:
+        return off["total_n"]
     move = find(character_id, notation, data_dir)
     if move is None:
         return None

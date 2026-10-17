@@ -15,7 +15,10 @@ _CHARACTER_FILES = {
     "akuma": "Akuma", "ed": "Ed", "rashid": "Rashid", "m_bison": "MBison",
     "terry": "Terry", "elena": "Elena", "sagat": "Sagat", "alex": "Alex",
     "c_viper": "CViper", "ingrid": "Ingrid", "yasmine": "Yasmine",
+    "arjun": "Arjun",
 }
+
+CATALOG_PENDING = frozenset({"arjun"})
 
 _cache: dict = {}
 
