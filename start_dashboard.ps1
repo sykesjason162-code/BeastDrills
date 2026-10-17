@@ -32,7 +32,11 @@ param(
     [int]$Port = 0,
     [switch]$NoBrowser,
     # Stop both processes and exit. "Stop Beast Drills.bat" passes this.
-    [switch]$Stop
+    [switch]$Stop,
+    # Never ask anything. The plugin passes this when it starts Beast
+    # Drills by itself with the game (AutoStart.cs): that window is hidden,
+    # so a question would wait for an answer nobody can give.
+    [switch]$NoPrompt
 )
 $ErrorActionPreference = 'Stop'
 
@@ -83,6 +87,13 @@ if ($LASTEXITCODE -ne 0) {
 & $python -c "import flask" 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "The dashboard needs one Python package, Flask, which is not installed." -ForegroundColor Yellow
+    if ($NoPrompt) {
+        # Started hidden by the game: installing means a download, and that
+        # is the player's call, so stop and let the in-game hint send them
+        # to Start Beast Drills.bat, which asks.
+        Write-Host "Run Start Beast Drills.bat once to install it."
+        exit 1
+    }
     $answer = Read-Host "Install it now from the Python Package Index (pip install flask)? [Y/n]"
     if ($answer -match '^\s*(n|no)\s*$') {
         Write-Host "Not installed. To do it yourself:  $python -m pip install flask"

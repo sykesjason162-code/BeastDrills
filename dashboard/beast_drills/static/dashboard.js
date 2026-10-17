@@ -1358,9 +1358,9 @@ function cardHTML(d) {
     <div class="${cardClass}${selectedClass}${favClass}"${artStyle}>
       <div class="top">
         <label class="card-select" title="Send this drill to the game">
-          <input type="checkbox" class="card-select-checkbox" id="select-${d.id}"${d.selected ? " checked" : ""}>
+          <input type="checkbox" class="card-select-checkbox" id="select-${escapeHTML(d.id)}"${d.selected ? " checked" : ""}>
         </label>
-        <button class="card-fav${d.favorite ? " on" : ""}" id="fav-${d.id}"
+        <button class="card-fav${d.favorite ? " on" : ""}" id="fav-${escapeHTML(d.id)}"
                 aria-pressed="${d.favorite ? "true" : "false"}"
                 title="${d.favorite ? "In your favorites" : "Add to favorites"}">${d.favorite ? "&#9733;" : "&#9734;"}</button>
       </div>
@@ -1375,9 +1375,9 @@ function cardHTML(d) {
       ${gradeLineHTML(d)}
       ${perCharacterHTML(d)}
       <div class="card-actions">
-        <button class="btn" id="edit-${d.id}">Edit</button>
-        <button class="btn" id="history-${d.id}">History</button>
-        <button class="btn" id="delete-${d.id}">Delete</button>
+        <button class="btn" id="edit-${escapeHTML(d.id)}">Edit</button>
+        <button class="btn" id="history-${escapeHTML(d.id)}">History</button>
+        <button class="btn" id="delete-${escapeHTML(d.id)}">Delete</button>
       </div>
       <div class="card-meta">
         <div class="top-tags">
@@ -1392,10 +1392,12 @@ function cardHTML(d) {
 }
 
 function escapeHTML(s) {
-  const div = document.createElement("div");
-  div.textContent = s;
-  return div.innerHTML;
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+
+// Jason, docs/idea-list.md: "Allow clickable links in the descriptions of
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/g;
 

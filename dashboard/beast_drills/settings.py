@@ -47,6 +47,11 @@ DEFAULTS: tuple[tuple[str, str, object, str], ...] = (
      "your machine already has 8765."),
     ("dashboard", "open_browser", True,
      "Open the dashboard in your browser when it starts."),
+    ("dashboard", "auto_start", True,
+     "Start Beast Drills' background service by itself when the game\n"
+     "starts, if it is not already running. Set to false if you would\n"
+     "rather start it yourself with Start Beast Drills.bat.\n"
+     "(Read by the game; no browser opens when it starts this way.)"),
     ("dashboard", "public_url", "",
      "The address the IN-GAME menu should open.\n"
      "Leave blank on a normal single-PC setup -- it is worked out from\n"

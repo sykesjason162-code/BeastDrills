@@ -168,20 +168,12 @@ function renderMatch(m) {
   host.appendChild(hero);
 
   if (m.player_side === 1) {
-    host.appendChild(el("p", "mt-note", T(
-      "You played from the right side. The tally counts from the left, so this"
-      + " match was turned around to your side; whiffs, missed blocks and parries,"
-      + " parry whiffs, perfect parries and missed back rolls are only counted on"
-      + " the left side and are left out.")));
+    host.appendChild(el("p", "mt-note", T("You played from the right side. The tally counts from the left, so this match was turned around to your side; whiffs, missed blocks and parries, parry whiffs, perfect parries and missed back rolls are only counted on the left side and are left out.")));
   } else if (m.player_side == null) {
-    host.appendChild(el("p", "mt-note", T(
-      "No single player on this machine, so this is the left side's view and it"
-      + " does not change your next session.")));
+    host.appendChild(el("p", "mt-note", T("No single player on this machine, so this is the left side's view and it does not change your next session.")));
   }
   if (!m.finished) {
-    host.appendChild(el("p", "mt-note", T(
-      "The game closed before this match ended. The rounds that finished are kept;"
-      + " an unfinished match does not change your next session.")));
+    host.appendChild(el("p", "mt-note", T("The game closed before this match ended. The rounds that finished are kept; an unfinished match does not change your next session.")));
   }
 
   const grid = el("div", "mt-grid");
@@ -294,10 +286,9 @@ function renderOverall() {
 
   const box = el("div", "mt-panel mt-overall");
   box.appendChild(el("h3", null, T("Overall") + (wanted ? " — " + charName(wanted) : "")));
-  box.appendChild(el("p", "sub", T(
-    "Every match you have finished, including ones whose details were cleared to save space.")));
+  box.appendChild(el("p", "sub", T("Every match you have finished, including ones whose details were cleared to save space.")));
   const facts = el("div", "mt-facts");
-  facts.appendChild(fact("Matches", String(o.matches)));
+  facts.appendChild(fact("Matches played", String(o.matches)));
   facts.appendChild(fact("Won", o.wins + "–" + o.losses));
   facts.appendChild(fact("Rounds", o.rounds_won + "–" + o.rounds_lost));
   facts.appendChild(fact("Score", o.score == null ? "-" : String(Math.round(o.score))));

@@ -53,7 +53,8 @@
     (root || document).querySelectorAll("[data-t]").forEach((el) => {
 
       if (el.firstElementChild) return;
-      const key = el.getAttribute("data-t") || el.textContent.trim();
+
+      const key = el.getAttribute("data-t") || el.textContent.trim().replace(/\s+/g, " ");
       if (!key) return;
 
       if (!el.dataset.tKey) el.dataset.tKey = key;

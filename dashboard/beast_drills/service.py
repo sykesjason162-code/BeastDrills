@@ -36,7 +36,7 @@ import logging.handlers
 import time
 from pathlib import Path
 
-from . import attempts, gauges, mods, paths, settings
+from . import attempts, gauges, ids, mods, paths, settings
 
 from . import (
     combo_check,
@@ -1021,6 +1021,10 @@ class Service:
 
         drill = dict(event.get("drill") or {})
         base_id = drill.get("id") or "captured_drill"
+        if not ids.valid_drill_id(base_id):
+
+            log.warning("create_drill_request with an invalid id %r -- discarded", base_id)
+            return
         existing_ids = {d.get("id") for d in (db.get("drills") or [])}
         existing_ids.update(db.get("deleted_drill_ids") or [])
         final_id, n = base_id, 2
@@ -1129,6 +1133,13 @@ class Service:
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     event = json.load(f)
+                if not isinstance(event, dict):
+                    raise ValueError("not a JSON object")
+            except (OSError, ValueError) as e:
+
+                self._quarantine(path, e)
+                continue
+            try:
                 kind = event.get("event")
                 if kind == "rep_result":
                     self._handle_rep_result(event, db)
@@ -1172,14 +1183,28 @@ class Service:
                     self._handle_favorite_match(event)
                 else:
                     log.warning("unknown outbox event kind=%r in %s, discarding", kind, path.name)
-            except (OSError, json.JSONDecodeError, KeyError) as e:
-                log.error("failed processing outbox file %s: %s -- discarding", path.name, e)
-            finally:
-                try:
-                    path.unlink()
-                except OSError:
-                    pass
+            except Exception as e:
+
+                self._quarantine(path, e)
+                raise
+            try:
+                path.unlink()
+            except OSError:
+                pass
         return db
+
+    def _quarantine(self, path: Path, error: Exception) -> None:
+        failed = path.parent / "failed"
+        try:
+            failed.mkdir(exist_ok=True)
+            target = failed / path.name
+            path.replace(target)
+            log.error("outbox event %s failed (%s: %s) -- kept in %s",
+                      path.name, type(error).__name__, error, target)
+        except OSError as move_error:
+
+            log.error("outbox event %s failed (%s) and could not be moved aside (%s)",
+                      path.name, error, move_error)
 
     def run_forever(self) -> None:
 

@@ -113,11 +113,24 @@ files. Your drills in `Documents\Beast Drills` are not touched either way.
 
 ## Running it
 
-1. Double-click **`Start Beast Drills.bat`** in the game folder. It runs in
-   the background, with no window of its own, and opens your browser at
-   <http://localhost:8765>, or wherever `beast_drills.ini` says. The first
-   time, it may ask to install Flask (see above).
+1. The **first time**, double-click **`Start Beast Drills.bat`** in the game
+   folder. It may ask to install Flask (see above), then runs in the
+   background with no window of its own and opens your browser at
+   <http://localhost:8765>, or wherever `beast_drills.ini` says.
+   After that, **the game starts it for you**: when Street Fighter 6 starts
+   and Beast Drills is not running, it starts it in the background (no
+   browser). The menu bar reads **Starting** for a few seconds while it
+   comes up. Turn this off with `auto_start = false` under `[dashboard]` in
+   `beast_drills.ini`. The .bat still works whenever you like.
 2. Launch Street Fighter 6 and enter **Training Mode**.
+
+   > **The first launch can look frozen for a couple of minutes** on the
+   > Capcom and startup screens. That is REFramework building its .NET
+   > files, the first time after you install it, after every Street
+   > Fighter 6 update, and after you update REFramework. It is not a
+   > crash: leave it running.
+   > Closing it only makes the next launch start the build over.
+
 3. Move the mouse to the very top of the screen — the Beast Drills menu bar
    appears. **F1** pins it open.
 
@@ -273,9 +286,18 @@ that read-only mods are not acted on — but nobody can promise that.
 
 ## If something looks wrong
 
+**The game sits on the Capcom screens for minutes.**
+Normal on the first launch after installing REFramework, after every
+Street Fighter 6 update, and after updating REFramework: it is rebuilding
+its .NET files. Wait it
+out. If it never gets past them, check `re2_framework_log.txt` in the game
+folder for errors.
+
 **The menu bar says "Jammed."**
-The dashboard is not running, or it stopped. Run `Start Beast Drills.bat`
-again. Jammed means the game cannot reach it — results are not being saved
+The dashboard is not running, or it stopped, and the game could not start
+it. Run `Start Beast Drills.bat` -- if Flask is missing it asks to install
+it, which the game will not do by itself. Hover over "Jammed" for the
+reason. Jammed means the game cannot reach it — results are not being saved
 while it shows.
 
 **"Chamber Empty."**
@@ -324,9 +346,6 @@ for `BeastDrills.dll` under `reframework\plugins\managed\`. Then open
   stops writing to the game as soon as it detects an online match, but it
   does not yet pause the session, so you return to a drill that is still
   counting. Stop it first (**Numpad 2**) and start again afterwards.
-- **A Dragon Punch anti-air does not count as an anti-air** in the tally.
-  Normal anti-airs do. Specials that launch an airborne opponent are
-  missed for now.
 
 ---
 

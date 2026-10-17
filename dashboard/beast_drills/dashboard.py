@@ -26,7 +26,7 @@ from . import (attempts, criteria, dashboard_data, database, deck, drill_search,
                outbox_writer, response_check, reviews_db, scheduler, wongscript)
 
 from .live_status import player_character
-from . import paths, settings
+from . import ids, paths, settings
 from .service import DEFAULT_DATA_DIR
 
 log = logging.getLogger("beast_drills.dashboard")
@@ -96,6 +96,35 @@ def create_app(data_dir) -> Flask:
     app = Flask(__name__)
 
     app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+    app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
+
+    app.config.setdefault("BD_LOCAL_ONLY", True)
+
+    _LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+
+    @app.before_request
+    def _refuse_cross_site():
+        raw = request.host or ""
+
+        if raw.startswith("[") and "]" in raw:
+            hostname = raw[1:raw.index("]")]
+        else:
+            hostname = raw.rsplit(":", 1)[0]
+        if app.config["BD_LOCAL_ONLY"] and hostname not in _LOOPBACK:
+            return jsonify({"error": "host_not_allowed"}), 403
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return None
+        origin = request.headers.get("Origin")
+        if origin and origin != "null":
+            from urllib.parse import urlsplit
+            if urlsplit(origin).netloc != request.host:
+                return jsonify({"error": "cross_origin_refused"}), 403
+        elif origin == "null":
+            return jsonify({"error": "cross_origin_refused"}), 403
+        if (request.content_length or 0) > 0 and not request.is_json:
+            return jsonify({"error": "json_required"}), 415
+        return None
 
     @app.get("/")
     def index():
@@ -389,9 +418,12 @@ def create_app(data_dir) -> Flask:
         if not name:
             return jsonify({"error": "name_required"}), 400
 
+        drill_id = body.get("id") or _slugify(name)
+        if not ids.valid_drill_id(drill_id):
+            return jsonify({"error": "invalid_id: letters, digits, _ . - only"}), 400
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         drill = {
-            "id": body.get("id") or _slugify(name),
+            "id": drill_id,
             "name": name,
             "description": body.get("description") or "",
             "training_settings": body.get("training_settings") or {},
@@ -713,6 +745,8 @@ def main() -> None:
         log.info("moved out of the game folder: %s", moved)
 
     app = create_app(args.data_dir)
+
+    app.config["BD_LOCAL_ONLY"] = args.host in ("127.0.0.1", "localhost", "::1")
     log.info("beast_drills.dashboard running against %s", args.data_dir)
     if args.host != "127.0.0.1":
 
