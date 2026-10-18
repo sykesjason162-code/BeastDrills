@@ -186,14 +186,20 @@ def reviews_for_drill(path, drill_id: str) -> list:
 
 def rekey_drill(path, from_id: str, to_id: str) -> int:
 
+    return rekey_drills(path, [from_id], to_id).get(from_id, 0)
+
+def rekey_drills(path, from_ids, to_id: str) -> dict:
+
     if not Path(path).exists():
-        return 0
+        return {}
     conn = _connect(path)
     try:
-        cur = conn.execute("UPDATE reviews SET drill_id = ? WHERE drill_id = ?",
-                           (to_id, from_id))
-        conn.commit()
-        return cur.rowcount or 0
+        with conn:
+            return {
+                from_id: conn.execute("UPDATE reviews SET drill_id = ? WHERE drill_id = ?",
+                                      (to_id, from_id)).rowcount or 0
+                for from_id in from_ids
+            }
     finally:
         conn.close()
 

@@ -148,8 +148,7 @@ def sync(install_dir) -> dict:
             lines = []
             for entry in missing:
                 if entry["note"]:
-                    for line in entry["note"].split("\n"):
-                        lines.append("# " + line)
+                    lines.extend("# " + line for line in entry["note"].split("\n"))
                 lines.append("{} = {}".format(entry["key"],
                                               _format(entry["default"])))
                 lines.append("")

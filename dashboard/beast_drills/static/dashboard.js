@@ -125,6 +125,8 @@ let trainsSelected = new Set();
 let trainsForSelected = new Set();
 
 let fixedComboText = null;
+
+let beltDrillValue = null;
 let slotRows = [];
 
 const SLOT_KIND_LABELS = {
@@ -567,10 +569,11 @@ function renderAddedChart() {
 }
 
 async function refreshLive() {
-  const { ok, body } = await fetchJSON("/api/live");
   const freshnessEl = document.getElementById("live-freshness");
   const bodyEl = document.getElementById("live-body");
+
   if (!bodyEl) return;
+  const { ok, body } = await fetchJSON("/api/live");
   if (!ok || !body) return;
 
   if (body.is_stale || !body.live_status) {
@@ -1042,7 +1045,7 @@ function renderDrillsMore() {
 const DRILL_TYPE_ORDER = ["recording", "reversal", "combo", "none"];
 const DRILL_TYPE_LABELS = { recording: "Recording", reversal: "Reversal", combo: "Combo", none: "None" };
 const UNSET_FILTER_VALUE = "__unset__";
-const drillFilters = { type: "", character: "", dummy: "" };
+const drillFilters = { type: "", character: "", dummy: "", belt: "" };
 
 function populateOptionsPreserving(selectEl, options, blankLabel) {
   const prev = selectEl.value;
@@ -1060,7 +1063,7 @@ function populateCharacterFilterSelect(selectEl, characterIds, hasUnset) {
 }
 
 function filterQueryTerms() {
-  return ["type", "character", "dummy"]
+  return ["type", "character", "dummy", "belt"]
     .filter((k) => drillFilters[k])
     .map((k) => `${k}:${drillFilters[k]}`);
 }
@@ -1073,6 +1076,17 @@ function readDrillFilterInputs() {
   drillFilters.type = document.getElementById("filter-type").value;
   drillFilters.character = document.getElementById("filter-character").value;
   drillFilters.dummy = document.getElementById("filter-dummy").value;
+  drillFilters.belt = document.getElementById("filter-belt")?.value || "";
+}
+
+const BELT_LABELS = { white: "White", yellow: "Yellow", blue: "Blue", red: "Red", black: "Black" };
+function populateBeltFilterSelect(selectEl, belts) {
+  if (!selectEl) return;
+  populateOptionsPreserving(selectEl, [
+    { value: "yes", label: "Belt drills" },
+    { value: "no", label: "Not belt drills" },
+    ...(belts || []).map((b) => ({ value: b, label: `${BELT_LABELS[b] || b} belt` })),
+  ], "All");
 }
 
 async function populateDrillFilterOptions() {
@@ -1093,6 +1107,7 @@ async function populateDrillFilterOptions() {
     document.getElementById("filter-character"), body.characters || [], body.characters_unset);
   populateCharacterFilterSelect(
     document.getElementById("filter-dummy"), body.dummies || [], body.dummies_unset);
+  populateBeltFilterSelect(document.getElementById("filter-belt"), body.belts);
 
   readDrillFilterInputs();
 }
@@ -1102,7 +1117,7 @@ function updateFilterStatus() {
   if (!countEl) return;
 
   const total = drillTotal || allDrills.length;
-  const anyActive = !!(drillSearchText || drillFilters.type || drillFilters.character || drillFilters.dummy);
+  const anyActive = !!(drillSearchText || drillFilters.type || drillFilters.character || drillFilters.dummy || drillFilters.belt);
   countEl.textContent = anyActive
     ? `${drillMatched} of ${total} drill${total === 1 ? "" : "s"}`
     : `${total} drill${total === 1 ? "" : "s"}`;
@@ -1121,8 +1136,9 @@ function renderDrillsGrid() {
   } else {
     grid.innerHTML = filtered.map(cardHTML).join("");
     filtered.forEach((d) => {
-      document.getElementById(`edit-${d.id}`).addEventListener("click", () => openEditModal(d));
-      document.getElementById(`delete-${d.id}`).addEventListener("click", () => openDeleteModal(d.id, d.name));
+      document.getElementById(`edit-${d.id}`).addEventListener("click", () => d.locked ? openViewModal(d) : openEditModal(d));
+      document.getElementById(`delete-${d.id}`)?.addEventListener("click", () => openDeleteModal(d.id, d.name));
+      document.getElementById(`dup-${d.id}`)?.addEventListener("click", () => openDuplicateModal(d));
       document.getElementById(`history-${d.id}`).addEventListener("click", () => openHistoryModal(d.id));
       document.getElementById(`select-${d.id}`).addEventListener("change", (e) => {
         toggleDrillSelection(d.id, e.target.checked);
@@ -1138,7 +1154,8 @@ function clearDrillFilters() {
   drillFilters.type = "";
   drillFilters.character = "";
   drillFilters.dummy = "";
-  ["filter-type", "filter-character", "filter-dummy"].forEach((id) => {
+  drillFilters.belt = "";
+  ["filter-type", "filter-character", "filter-dummy", "filter-belt"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -1360,6 +1377,7 @@ function cardHTML(d) {
         <label class="card-select" title="Send this drill to the game">
           <input type="checkbox" class="card-select-checkbox" id="select-${escapeHTML(d.id)}"${d.selected ? " checked" : ""}>
         </label>
+        ${beltChipHTML(d)}
         <button class="card-fav${d.favorite ? " on" : ""}" id="fav-${escapeHTML(d.id)}"
                 aria-pressed="${d.favorite ? "true" : "false"}"
                 title="${d.favorite ? "In your favorites" : "Add to favorites"}">${d.favorite ? "&#9733;" : "&#9734;"}</button>
@@ -1375,9 +1393,16 @@ function cardHTML(d) {
       ${gradeLineHTML(d)}
       ${perCharacterHTML(d)}
       <div class="card-actions">
-        <button class="btn" id="edit-${escapeHTML(d.id)}">Edit</button>
+        ${d.locked
+          // Official drills are what a belt is measured on, so a release
+          // locks them (belts.py); a copy is the player's to change, and
+          // counts toward no belt. A dev install edits them as normal.
+          ? `<button class="btn" id="edit-${escapeHTML(d.id)}" title="Official drills cannot be changed. Make your own copy to edit.">View</button>`
+          : `<button class="btn" id="edit-${escapeHTML(d.id)}">Edit</button>`}
         <button class="btn" id="history-${escapeHTML(d.id)}">History</button>
-        <button class="btn" id="delete-${escapeHTML(d.id)}">Delete</button>
+        ${d.locked
+          ? `<button class="btn" id="dup-${escapeHTML(d.id)}" title="Make your own copy to change. A copy counts toward no belt.">Duplicate</button>`
+          : `<button class="btn" id="delete-${escapeHTML(d.id)}">Delete</button>`}
       </div>
       <div class="card-meta">
         <div class="top-tags">
@@ -1748,6 +1773,7 @@ function addSlotRow() {
 }
 
 function resetModalFields() {
+  setModalReadOnly(false);
   document.getElementById("f-name").value = "";
   document.getElementById("f-description").value = "";
   document.getElementById("f-response-window").value = "";
@@ -1767,6 +1793,7 @@ function resetModalFields() {
   trainsSelected = new Set();
   trainsForSelected = new Set();
   fixedComboText = null;
+  beltDrillValue = null;
   slotRows = [];
   populateSelect(document.getElementById("f-position"), POSITION_PRESETS, "", "(keep as captured)");
   populateSelect(document.getElementById("f-block-setting"), BLOCK_SETTINGS, "", "(default: block after first hit)");
@@ -1776,8 +1803,19 @@ function resetModalFields() {
   renderFixedResponseChips();
   renderTrainsChips();
   renderSlotRows();
+  fillDifficulty(null);
   hideFormError();
   selectFormTab();
+}
+
+const DIFFICULTY_VALUES = ["very-easy", "easy", "medium", "hard", "very-hard"];
+
+function fillDifficulty(d) {
+  const sel = document.getElementById("f-difficulty");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">(not set)</option>` + DIFFICULTY_VALUES
+    .map((x) => `<option value="${x}">${x.replace("-", " ")}</option>`).join("");
+  sel.value = (d && d.difficulty) || "";
 }
 
 function openCreateModal() {
@@ -1785,7 +1823,100 @@ function openCreateModal() {
   editingDrillOriginal = null;
   document.getElementById("modal-title").textContent = "New Drill";
   resetModalFields();
+  setBeltNote(null);
+  watchWongForBelt();
   document.getElementById("modal-backdrop").classList.remove("hidden");
+}
+
+function openViewModal(d) {
+  openEditModal(d);
+  document.getElementById("modal-title").textContent = `Official: ${d.name}`;
+  setModalReadOnly(true);
+  const copy = document.getElementById("modal-copy");
+  copy.onclick = () => makeCopyFromView(d);
+}
+
+function openDuplicateModal(d) {
+  openEditModal(d);
+  makeCopyFromView(d);
+}
+
+function beltIconSVG() {
+  return `<svg class="belt-icon" viewBox="0 0 40 16" aria-hidden="true">
+    <rect class="belt-cloth" x="0" y="4" width="25" height="8" rx="1"/>
+    <rect class="belt-bar" x="16" y="4" width="6" height="8"/>
+    <rect class="belt-cloth" x="26" y="0" width="7" height="16" rx="1"/>
+    <rect class="belt-cloth" x="34" y="2" width="6" height="12" rx="1"/>
+  </svg>`;
+}
+
+function beltChipHTML(d) {
+  if (!d.official) return "";
+  const b = d.belt;
+  const label = b ? `${b.belt_name} · ${b.skill_label}` : "Belt drill";
+
+  const rule = d.locked
+    ? "Read-only: duplicate it to make your own version."
+    : "Dev install: editable here. Read-only in a release.";
+  const tip = b
+    ? `Counts toward your ${b.belt_name} belt (${b.skill_label}). ${rule}`
+    : `Part of the belt curriculum. ${rule}`;
+  return `<span class="belt-chip belt-${escapeHTML(b ? b.belt : "none")}" title="${escapeHTML(tip)}">
+    ${beltIconSVG()}
+    ${escapeHTML(label)}</span>`;
+}
+
+function setBeltNote(tag) {
+  const el = document.getElementById("f-belt-note");
+  if (!el) return;
+  el.innerHTML = tag
+    ? `${beltChipHTML({ official: true, belt: tag, locked: false })}`
+    : `<span class="hint">${escapeHTML(t("Regular drill: counts toward no belt. A belt-drill: line in WongScript makes it a belt drill."))}</span>`;
+}
+
+let beltNoteTimer = null;
+function watchWongForBelt() {
+  const box = document.getElementById("f-wong");
+  if (!box || box.dataset.beltWatch) return;
+  box.dataset.beltWatch = "1";
+  box.addEventListener("input", () => {
+    clearTimeout(beltNoteTimer);
+    beltNoteTimer = setTimeout(async () => {
+      const { ok, body } = await fetchJSON("/api/wongscript/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: box.value }),
+      });
+      if (ok && body && !(body.errors && body.errors.length)) setBeltNote(body.belt);
+    }, 500);
+  });
+}
+
+function setModalReadOnly(on) {
+  const modal = document.getElementById("modal-backdrop");
+  modal.classList.toggle("is-readonly", on);
+  modal.querySelectorAll("#modal-form-panel input, #modal-form-panel select, #modal-form-panel textarea, #modal-form-panel button")
+    .forEach((el) => { el.disabled = on; });
+  document.getElementById("f-wong").readOnly = on;
+  document.getElementById("modal-save").classList.toggle("hidden", on);
+  document.getElementById("modal-copy").classList.toggle("hidden", !on);
+  document.getElementById("modal-readonly-note").classList.toggle("hidden", !on);
+}
+
+function makeCopyFromView(d) {
+  setModalReadOnly(false);
+  editingDrillId = null;
+  const name = `${d.name || ""} (copy)`;
+  document.getElementById("modal-title").textContent = `Copy: ${d.name}`;
+  document.getElementById("f-name").value = name;
+  const wong = document.getElementById("f-wong");
+  if (wong.value) {
+    wong.value = wong.value.replace(/^title:.*$/m, `title: ${name}`)
+      .replace(/^belt-drill:.*(?:\r?\n|$)/m, "");
+  }
+
+  beltDrillValue = null;
+  setBeltNote(null);
 }
 
 function openEditModal(d) {
@@ -1793,6 +1924,8 @@ function openEditModal(d) {
   editingDrillOriginal = d;
   document.getElementById("modal-title").textContent = `Edit: ${d.name}`;
   resetModalFields();
+  setBeltNote(d.belt);
+  watchWongForBelt();
 
   document.getElementById("f-name").value = d.name || "";
   document.getElementById("f-description").value = d.description || "";
@@ -1818,6 +1951,8 @@ function openEditModal(d) {
   trainsSelected = new Set(d.trains || []);
   trainsForSelected = new Set(d.trains_for || []);
   fixedComboText = d.fixed_expected_combo || null;
+  beltDrillValue = d.belt_drill || null;
+  fillDifficulty(d);
   renderFixedResponseChips();
   renderTrainsChips();
 
@@ -1986,6 +2121,7 @@ async function buildDrillPayloadFromForm({ wongTabActive }) {
     survive_seconds: surviveRaw === "" ? null : parseInt(surviveRaw, 10),
     trains: trainsSelected.size > 0 ? [...trainsSelected] : null,
     trains_for: trainsForSelected.size > 0 ? [...trainsForSelected] : null,
+    difficulty: document.getElementById("f-difficulty")?.value || null,
     response_window_frames: rwRaw === "" ? null : parseInt(rwRaw, 10),
     attempts: document.getElementById("f-attempts").value,
     game_speed: gsRaw === "" ? null : parseInt(gsRaw, 10),
@@ -1997,6 +2133,7 @@ async function buildDrillPayloadFromForm({ wongTabActive }) {
   };
 
   if (wongTabActive) payload.fixed_expected_combo = fixedComboText;
+  if (wongTabActive) payload.belt_drill = beltDrillValue;
 
   return payload;
 }
@@ -2188,6 +2325,8 @@ function fillFormFromParsedDrill(drill) {
   trainsSelected = new Set(drill.trains || []);
   trainsForSelected = new Set(drill.trains_for || []);
   fixedComboText = drill.fixed_expected_combo || null;
+  beltDrillValue = drill.belt_drill || null;
+  fillDifficulty(drill);
   renderFixedResponseChips();
   renderTrainsChips();
 
@@ -2230,6 +2369,7 @@ async function parseWongScriptIntoForm() {
     return false;
   }
   fillFormFromParsedDrill(body.drill);
+  setBeltNote(body.belt);
   return true;
 }
 
@@ -2338,7 +2478,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("history-close").addEventListener("click", closeHistoryModal);
     document.getElementById("history-close-btn").addEventListener("click", closeHistoryModal);
 
-    ["filter-type", "filter-character", "filter-dummy"].forEach((id) => {
+    ["filter-type", "filter-character", "filter-dummy", "filter-belt"].forEach((id) => {
       document.getElementById(id).addEventListener("change", () => {
         readDrillFilterInputs();
         refreshDrills();
@@ -2494,10 +2634,15 @@ document.addEventListener("DOMContentLoaded", () => {
   refreshHourly();
   refreshAnswerButtons();
   refreshAdded();
-  setInterval(refreshLive, 1000);
-  setInterval(refreshOverview, 5000);
-  setInterval(refreshHitZones, 5000);
+  whileVisible(refreshLive, 1000);
+  whileVisible(refreshOverview, 5000);
+  whileVisible(refreshHitZones, 5000);
 });
+
+function whileVisible(fn, ms) {
+  setInterval(() => { if (!document.hidden) fn(); }, ms);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) fn(); });
+}
 
 let duplicatesLoaded = false;
 

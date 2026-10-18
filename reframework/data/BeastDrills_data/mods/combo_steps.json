@@ -1,0 +1,10 @@
+{
+  "api_version": 1,
+  "name": "Combo Steps",
+  "author": "Beast Drills",
+  "menu": "VIEW",
+  "items": [
+    { "id": "show", "toggle": "Show combo steps", "label": "Combo Steps" }
+  ],
+  "_comment": "Beast Drills' own Combo Steps overlay, built as a mod against the public contract (docs/EXTENSIONS.md). The plugin is BeastDrillsComboSteps (csharp/mods/ComboSteps). 'toggle' is a checkbox whose state the mod publishes itself, in mods/_toggles/combo_steps.json -- the item kind for mods that are not Lua."
+}

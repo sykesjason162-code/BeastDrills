@@ -1,4 +1,4 @@
-from . import criteria, response_check
+from . import response_check
 
 def _label(expected, combo=None):
 

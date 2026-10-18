@@ -1,25 +1,27 @@
-"""The main service loop: watches the outbox directory Lua writes to,
-grades reps and finalizes sessions using the ported core/*.py logic, owns
-shared_database.json, and keeps the inbox file (next due drill + a
-heartbeat) fresh for Lua to read.
+"""The main service loop: watches the outbox the plugin and the dashboard
+write to, grades reps and finalizes sessions, owns shared_database.json,
+and keeps the inbox file (next due drill + a heartbeat) fresh for the
+plugin to read.
 
-Run manually before playing -- REFramework can't spawn this itself (no
-`io.popen` in its Lua bindings, confirmed in
-_reference/REFramework/src/mods/bindings/FS.cpp). See docs/SERVICE.md.
+Started with the game: the plugin runs the shipped launcher the first time
+it finds no service (csharp/src/AutoStart.cs), and Start Beast Drills.bat
+does the same by hand. See docs/SERVICE.md.
 
-File protocol (all paths relative to the BeastDrills_data directory REFramework
-resolves reframework/data/ paths against):
-  outbox/*.json   -- Lua writes one file per event (rep_result,
-                     session_concluded), never overwritten -- durable
-                     queue, nothing lost if this service is slow/down.
-                     This service deletes each file after processing.
-  _inbox.json     -- this service writes the current due drill + a
-                     heartbeat timestamp; Lua reads it fresh each time
-                     it wants to start a session and fails closed if the
-                     heartbeat is stale (see session.lua).
-  shared_database.json -- owned entirely by this service now (drill
-                     definitions + CURRENT scheduling state). Lua no
-                     longer reads or writes it.
+File protocol (paths under the PLAYER folder, Documents/Beast Drills by
+default -- paths.py owns the layout):
+  outbox/*.json   -- the plugin (C#, csharp/src/Outbox.cs) and the
+                     dashboard (outbox_writer.py) write one file per
+                     event, never overwritten -- a durable queue, nothing
+                     lost if this service is slow or down. This service
+                     deletes each file once its change is on disk (see
+                     _process_outbox).
+  runtime/inbox.json -- this service writes the current due drill, a
+                     heartbeat timestamp and the dashboard address; the
+                     plugin reads it, and refuses to start a session when
+                     the heartbeat is stale (Outbox.cs).
+  shared_database.json -- written only by this service (drill
+                     definitions + CURRENT scheduling state). The plugin
+                     READS it for its drill list, and never writes it.
   stats.db  -- owned entirely by this service (2026-08-15). The
                      append-only per-session review log -- one row per
                      concluded session -- that used to live as each
@@ -30,16 +32,21 @@ resolves reframework/data/ paths against):
 """
 
 import argparse
+import contextlib
+import copy
 import json
 import logging
 import logging.handlers
+import re
+import sqlite3
 import time
 from pathlib import Path
 
-from . import attempts, gauges, ids, mods, paths, settings
+from . import attempts, belts, gauges, ids, mods, paths, settings
 
 from . import (
     combo_check,
+    combo_plan,
     criteria,
     session_breakdown,
     session_progress,
@@ -54,6 +61,7 @@ from . import (
     attack_string,
     live_status,
     move_catalog,
+    move_timing,
     progress,
     wongscript,
     response_window,
@@ -66,7 +74,8 @@ from . import (
 log = logging.getLogger("beast_drills")
 
 POLL_SECONDS = 0.5
-HEARTBEAT_STALE_AFTER_SECONDS = 5
+
+PENDING_HISTORY_MOVES = "pending_history_moves"
 
 _DEV_INSTALL = Path(
     r"C:\Program Files (x86)\Steam\steamapps\common\Street Fighter 6\reframework\data\BeastDrills_data"
@@ -81,7 +90,7 @@ def _default_install(here: Path | None = None) -> Path:
             return shipped
     return _DEV_INSTALL
 
-DEFAULT_DATA_DIR = _default_install()
+DEFAULT_INSTALL_DIR = _default_install()
 
 def _recording_slot_index(entry):
 
@@ -153,7 +162,7 @@ class Service:
         self.example_db_path = paths.example_database(self.install_dir)
 
         self.stats_db_path = paths.stats_db(data_dir)
-        cfg = settings.load(DEFAULT_DATA_DIR)
+        cfg = settings.load(DEFAULT_INSTALL_DIR)
 
         self.dashboard_url = settings.dashboard_url(cfg)
 
@@ -174,23 +183,127 @@ class Service:
         self._progress_path = paths.session_progress(self.data_dir)
         self._restore_progress()
 
+        self._in_batch = False
+        self._batch_dirty = False
+        self._batch_changes = 0
+        self._batch_pending = []
+
+        self._db_cache = None
+        self._db_cache_key = None
+
     def _load_db(self) -> dict:
+
+        try:
+            stat = self.db_path.stat()
+            key = (stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            key = None
+        if key is not None and key == self._db_cache_key and self._db_cache is not None:
+            return self._db_cache
         data, err = database.load(self.db_path)
         if data is not None:
+            self._db_cache, self._db_cache_key = data, key
             return data
 
         if self.db_path.exists():
-            raise RuntimeError(
-                f"shared_database.json exists but could not be read, and was "
-                f"left untouched: {err}")
+
+            raise RuntimeError(database.unreadable_message(
+                self.db_path, paths.backups_dir(self.data_dir), err))
         example, ex_err = database.load(self.example_db_path)
         if example is None:
             raise RuntimeError(f"no database and no example to bootstrap from: {ex_err}")
+
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        for drill in example.get("drills") or []:
+            _fresh_schedule(drill, now)
         ok, save_err = database.save(self.db_path, example)
         if not ok:
             raise RuntimeError(f"bootstrap save failed: {save_err}")
         log.info("Seeded shared_database.json from the example file (first run).")
         return example
+
+    def _forget_db(self) -> None:
+
+        self._db_cache = self._db_cache_key = None
+
+    def _changed(self, db: dict, what: str) -> bool:
+
+        if self._in_batch:
+            self._batch_dirty = True
+            self._batch_changes += 1
+            return True
+        ok, err = database.save(self.db_path, db)
+        if not ok:
+            log.error("failed saving database after %s: %s", what, err)
+        return ok
+
+    def _save_now(self, db: dict) -> tuple:
+
+        ok, err = database.save(self.db_path, db)
+        if ok and self._in_batch:
+            self._batch_dirty = False
+            self._delete_events(self._batch_pending)
+            self._batch_pending = []
+        return ok, err
+
+    @staticmethod
+    def _delete_events(event_paths) -> None:
+        for path in event_paths:
+            with contextlib.suppress(OSError):
+                path.unlink()
+
+    def _refuse_belt_drills(self, kind: str, db: dict, drill_ids) -> bool:
+        if paths.is_dev_install():
+            return False
+        locked = [i for i in drill_ids
+                  if belts.is_belt_drill(self._find_drill(db, i) or {})]
+        if locked:
+            log.warning("%s refused: %s %s a belt drill, read-only outside a dev install",
+                        kind, ", ".join(locked), "is" if len(locked) == 1 else "are")
+        return bool(locked)
+
+    def _add_shipped_drills(self) -> int:
+
+        if paths.is_dev_install():
+            return 0
+        example, _err = database.load(self.example_db_path)
+        if not example:
+            return 0
+        db = self._load_db()
+        have_ids = {d.get("id") for d in db.get("drills") or []}
+        gone = set(db.get("deleted_drill_ids") or [])
+        have_names = {duplicates.name_key(d) for d in db.get("drills") or []}
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        added = []
+        for shipped in example.get("drills") or []:
+            drill_id = shipped.get("id")
+            if (not drill_id or drill_id in have_ids or drill_id in gone
+                    or duplicates.name_key(shipped) in have_names):
+                continue
+            drill = dict(shipped)
+            drill.pop("selected", None)
+            _fresh_schedule(drill, now)
+            added.append(drill)
+            have_ids.add(drill_id)
+            have_names.add(duplicates.name_key(shipped))
+        if not added:
+            return 0
+
+        nothing_selected = not any(d.get("selected") for d in db.get("drills") or [])
+        db.setdefault("drills", []).extend(added)
+        if nothing_selected:
+            starters = {d.get("id") for d in example.get("drills") or [] if d.get("selected")}
+            picked = [d for d in db["drills"] if d.get("id") in starters]
+            for drill in picked:
+                drill["selected"] = True
+            if picked:
+                log.info("nothing was selected: selected the %d starter drill(s)", len(picked))
+        ok, err = database.save(self.db_path, db)
+        if not ok:
+            log.error("could not add %d shipped drill(s): %s", len(added), err)
+            return 0
+        log.info("added %d drill(s) that shipped since this deck was made", len(added))
+        return len(added)
 
     def _find_drill(self, db: dict, drill_id: str) -> dict | None:
         for d in db.get("drills") or []:
@@ -233,6 +346,7 @@ class Service:
             return
         ok, err = database.save(self.db_path, db)
         if not ok:
+            self._forget_db()
             log.error("failed saving retimed patterns: %s", err)
         else:
             log.info("retimed recorded tapes for dummy=%s", dummy)
@@ -287,18 +401,19 @@ class Service:
         dummy = live_status.dummy_character(self.live_status_path)
 
         recommended = scoring.latest_recommendations(db, played_as, dummy)
-        next_drill = deck.select_next_drill(
-            deck.get_due_drills(db, now_iso, played_as, dummy), recommended)
+        due = deck.get_due_drills(db, now_iso, played_as, dummy)
+        next_drill = deck.select_next_drill(due, recommended)
 
         next_favorite = deck.select_next_drill(
-            deck.get_due_drills(db, now_iso, played_as, dummy, favorites_only=True),
-            recommended)
+            [d for d in due if d.get("favorite")], recommended)
         payload = {
             "heartbeat": time.time(),
             "due_drill": self._with_reason(self._prepare_due(next_drill), db, played_as, dummy),
             "due_favorite": self._with_reason(self._prepare_due(next_favorite), db, played_as, dummy),
 
             "dashboard_url": self.dashboard_url,
+
+            "dashboard_installed": paths.web_dashboard_installed(),
         }
         tmp = self.inbox_path.with_suffix(".json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
@@ -367,6 +482,7 @@ class Service:
                      session_id, len(lists["grades"]))
 
     def _handle_rep_result(self, event: dict, db: dict) -> None:
+
         session_id = event["session_id"]
         drill_id = event["drill_id"]
         drill = self._find_drill(db, drill_id)
@@ -374,106 +490,10 @@ class Service:
             log.warning("rep_result for unknown drill_id=%s, ignoring", drill_id)
             return
 
-        verdict = None
-
-        if drill.get("drill_type") == "combo":
-            grade = combo_check.grade_combo_attempt(
-                event["final_combo_cnt"], drill.get("target_combo_hits", 0)
-            )
-
-            verdict = "hit" if grade != grader.AGAIN else "miss"
-        else:
-            expected_response = event.get("expected_response")
-            snapshot = event.get("snapshot", {})
-
-            expected_combo = event.get("expected_combo")
-            if expected_combo:
-                spec_errors = []
-                spec = attack_string.parse_attack_string(expected_combo, spec_errors)
-                if spec is None:
-                    log.warning(
-                        "unparseable expected_combo=%r for drill_id=%s (%s) -- grading AGAIN",
-                        expected_combo, drill_id, spec_errors,
-                    )
-                    grade = grader.AGAIN
-                else:
-
-                    move_ids = snapshot.get("p1_move_ids")
-                    char = drill.get("character_id")
-                    spec_sets, cat_err = (None, None)
-                    combo_mode, combo_text = attack_string.split_mode(expected_combo)
-                    if move_ids is not None and char:
-
-                        spec_sets, cat_err = move_catalog.resolve_all(
-                            char, [attack_string.strip_movement_prefix(t)
-                                   for t in combo_text.split(",")
-                                   if t.strip() and not attack_string.is_movement(t)],
-                            self.data_dir,
-                        )
-                    if spec_sets:
-
-                        moves = move_catalog.filter_to_moves(char, move_ids, self.data_dir)
-                        landed = moves
-                        ok, why = attack_string.check_move_ids(spec_sets, moves, combo_mode)
-                        log.info("combo %s (move-id, %s) drill=%s moves=%s raw=%s%s",
-                                 "HIT" if ok else "miss", combo_mode, drill_id, moves,
-                                 (move_ids or [])[:12], "" if ok else f" -- {why}")
-                        total = self._record_rep(
-                            session_id, grader.GOOD if ok else grader.AGAIN, event,
-                            outcome="hit" if ok else "miss")
-                        log.info("graded rep for session=%s drill=%s -> %s (total this session: %d)",
-                                 session_id, drill_id,
-                                 grader.GOOD if ok else grader.AGAIN, total)
-                        return
-                    if cat_err:
-                        log.warning("combo catalog: %s (falling back)", cat_err)
-                    inputs = snapshot.get("p1_attack_inputs")
-                    if inputs is not None:
-                        landed = inputs
-
-                        ok, why = attack_string.check_attack_inputs(
-                            spec, inputs, snapshot.get("p1_hit_count") or 0,
-                            combo_mode,
-                        )
-                    else:
-                        landed = snapshot.get("p1_landed_attacks") or []
-                        ok, why = attack_string.check_attack_string(spec, landed)
-                    grade = grader.GOOD if ok else grader.AGAIN
-                    verdict = "hit" if ok else "miss"
-
-                    readable = ", ".join(
-                        wongscript._bits_to_code(
-                            e.get("bits", 0) if isinstance(e, dict) else e
-                        )
-                        + ("" if not (isinstance(e, dict) and e.get("comboed_from_previous")) else "*")
-                        for e in landed
-                    ) or "(nothing)"
-                    log.info(
-                        "combo %s for drill_id=%s: landed [%s] vs spec %r%s",
-                        "HIT" if ok else "miss", drill_id, readable, expected_combo,
-                        "" if ok else f" -- {why}",
-                    )
-            elif expected_response is None and drill.get("against_criteria"):
-
-                try:
-                    ok = criteria.rep_avoided(snapshot, drill["against_criteria"])
-                except ValueError as exc:
-                    log.warning("bad against_criteria on drill_id=%s (%s) -- grading AGAIN",
-                                drill_id, exc)
-                    ok = False
-                grade = grader.GOOD if ok else grader.AGAIN
-                verdict = "hit" if ok else "miss"
-            elif expected_response is None:
-                grade = grader.AGAIN
-            else:
-                grade, reason = response_check.grade_response(
-                    expected_response, snapshot, drill.get("expected_setup"))
-                if grade is None:
-                    log.warning(
-                        "unsupported expected_response=%r for drill_id=%s (%s) -- grading AGAIN",
-                        expected_response, drill_id, reason,
-                    )
-                    grade = grader.AGAIN
+        graded = self._grade_rep(event, drill, session_id, drill_id)
+        if graded is None:
+            return
+        grade, verdict = graded
 
         total = self._record_rep(session_id, grade, event,
                                  drill.get("against_criteria"),
@@ -483,6 +503,139 @@ class Service:
             "graded rep for session=%s drill=%s -> %s (total this session: %d)",
             session_id, drill_id, grade, total,
         )
+        self._write_last_rep_result(session_id, drill_id, grade)
+
+    def _grade_rep(self, event: dict, drill: dict, session_id: str, drill_id: str):
+
+        if drill.get("drill_type") == "combo":
+            return self._grade_combo_count(event, drill)
+        snapshot = event.get("snapshot", {})
+
+        if event.get("expected_combo"):
+            return self._grade_attack_string(event, drill, snapshot, session_id, drill_id)
+        return self._grade_by_criteria(event, drill, snapshot, drill_id)
+
+    @staticmethod
+    def _grade_combo_count(event: dict, drill: dict) -> tuple:
+        grade = combo_check.grade_combo_attempt(
+            event["final_combo_cnt"], drill.get("target_combo_hits", 0)
+        )
+
+        return grade, ("hit" if grade != grader.AGAIN else "miss")
+
+    @staticmethod
+    def _grade_by_criteria(event: dict, drill: dict, snapshot, drill_id: str) -> tuple:
+
+        expected_response = event.get("expected_response")
+        if expected_response is None and drill.get("against_criteria"):
+
+            try:
+                ok = criteria.rep_avoided(snapshot, drill["against_criteria"])
+            except ValueError as exc:
+                log.warning("bad against_criteria on drill_id=%s (%s) -- grading AGAIN",
+                            drill_id, exc)
+                ok = False
+            return (grader.GOOD if ok else grader.AGAIN), ("hit" if ok else "miss")
+        if expected_response is None:
+            return grader.AGAIN, None
+        grade, reason = response_check.grade_response(
+            expected_response, snapshot, drill.get("expected_setup"))
+        if grade is None:
+            log.warning(
+                "unsupported expected_response=%r for drill_id=%s (%s) -- grading AGAIN",
+                expected_response, drill_id, reason,
+            )
+            grade = grader.AGAIN
+        return grade, None
+
+    def _grade_attack_string(self, event: dict, drill: dict, snapshot,
+                             session_id: str, drill_id: str):
+
+        expected_combo = event.get("expected_combo")
+        spec_errors = []
+        spec = attack_string.parse_attack_string(expected_combo, spec_errors)
+        if spec is None:
+            log.warning(
+                "unparseable expected_combo=%r for drill_id=%s (%s) -- grading AGAIN",
+                expected_combo, drill_id, spec_errors,
+            )
+            return grader.AGAIN, None
+        recorded, combo_mode = self._grade_by_move_ids(
+            event, drill, snapshot, expected_combo, session_id, drill_id)
+        if recorded:
+            return None
+        ok, why, landed = self._check_attack_inputs(spec, snapshot, combo_mode)
+
+        log.info(
+            "combo %s for drill_id=%s: landed [%s] vs spec %r%s",
+            "HIT" if ok else "miss", drill_id, self._describe_landed(landed),
+            expected_combo, "" if ok else f" -- {why}",
+        )
+        return (grader.GOOD if ok else grader.AGAIN), ("hit" if ok else "miss")
+
+    def _grade_by_move_ids(self, event: dict, drill: dict, snapshot, expected_combo,
+                           session_id: str, drill_id: str) -> tuple:
+
+        move_ids = snapshot.get("p1_move_ids")
+
+        char = (drill.get("character_id")
+                or live_status.player_character(self.live_status_path))
+        spec_sets, cat_err = (None, None)
+        combo_mode, combo_text = attack_string.split_mode(expected_combo)
+        if move_ids is not None and char:
+
+            spec_sets, cat_err = move_catalog.resolve_all(
+                char, [attack_string.strip_movement_prefix(t)
+                       for t in combo_text.split(",")
+                       if t.strip() and not attack_string.is_movement(t)],
+                self.data_dir,
+            )
+        if not spec_sets:
+            if cat_err:
+                log.warning("combo catalog: %s (falling back)", cat_err)
+            return False, combo_mode
+
+        moves = move_catalog.filter_to_moves(char, move_ids, self.data_dir)
+        ok, why = attack_string.check_move_ids(spec_sets, moves, combo_mode)
+        log.info("combo %s (move-id, %s) drill=%s moves=%s raw=%s%s",
+                 "HIT" if ok else "miss", combo_mode, drill_id, moves,
+                 (move_ids or [])[:12], "" if ok else f" -- {why}")
+
+        grade = grader.GOOD if ok else grader.AGAIN
+        total = self._record_rep(
+            session_id, grade, event, drill.get("against_criteria"),
+            drill.get("expected_setup"), outcome="hit" if ok else "miss")
+        log.info("graded rep for session=%s drill=%s -> %s (total this session: %d)",
+                 session_id, drill_id, grade, total)
+        self._write_last_rep_result(session_id, drill_id, grade)
+        return True, combo_mode
+
+    @staticmethod
+    def _check_attack_inputs(spec, snapshot, combo_mode) -> tuple:
+
+        inputs = snapshot.get("p1_attack_inputs")
+        if inputs is not None:
+
+            ok, why = attack_string.check_attack_inputs(
+                spec, inputs, snapshot.get("p1_hit_count") or 0,
+                combo_mode,
+            )
+            return ok, why, inputs
+        landed = snapshot.get("p1_landed_attacks") or []
+        ok, why = attack_string.check_attack_string(spec, landed)
+        return ok, why, landed
+
+    @staticmethod
+    def _describe_landed(landed) -> str:
+        return ", ".join(
+            wongscript._bits_to_code(
+                e.get("bits", 0) if isinstance(e, dict) else e
+            )
+            + ("" if not (isinstance(e, dict) and e.get("comboed_from_previous")) else "*")
+            for e in landed
+        ) or "(nothing)"
+
+    def _write_last_rep_result(self, session_id: str, drill_id: str, grade) -> None:
 
         result_payload = {"session_id": session_id, "drill_id": drill_id, "grade": grade}
         tmp = paths.last_rep_result(self.data_dir).with_suffix(".json.tmp")
@@ -562,7 +715,8 @@ class Service:
         )
         if not review_ok:
             log.error("failed recording review in %s: %s", self.stats_db_path, review_err)
-        ok, err = database.save(self.db_path, db)
+
+        ok, err = self._save_now(db)
         if not ok:
             log.error("failed saving database after session_concluded: %s", err)
         log.info(
@@ -594,6 +748,8 @@ class Service:
 
         drill_id = event["drill_id"]
         patch = event.get("patch", {})
+        if self._refuse_belt_drills("update_drill_request", db, [drill_id]):
+            return
         drill = self._find_drill(db, drill_id)
         if drill is None:
             log.warning("update_drill_request for unknown drill_id=%s, ignoring", drill_id)
@@ -610,6 +766,16 @@ class Service:
 
         if "fixed_expected_combo" in patch:
             drill["fixed_expected_combo"] = patch["fixed_expected_combo"]
+
+        if belts.FIELD in patch:
+            value = patch[belts.FIELD]
+            if value and not paths.is_dev_install():
+                log.warning("update_drill_request for %s tried to make it a belt drill "
+                            "outside a dev install -- ignored", drill_id)
+            elif belts.is_belt_drill({belts.FIELD: value}):
+                drill[belts.FIELD] = value
+            else:
+                drill.pop(belts.FIELD, None)
 
         drill["response_window_frames"] = patch.get("response_window_frames")
         drill["game_speed"] = patch.get("game_speed")
@@ -662,10 +828,7 @@ class Service:
             drill["wongscript_text"] = patch["wongscript_text"]
         else:
             drill.pop("wongscript_text", None)
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after update_drill_request: %s", err)
-        else:
+        if self._changed(db, "update_drill_request"):
             log.info("updated drill=%s", drill_id)
 
     @staticmethod
@@ -690,10 +853,7 @@ class Service:
             log.warning("set_drill_selection_request for unknown drill_id=%s, ignoring", drill_id)
             return
         drill["selected"] = bool(event.get("selected"))
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after set_drill_selection_request: %s", err)
-        else:
+        if self._changed(db, "set_drill_selection_request"):
             log.info("set selected=%s for drill=%s", drill["selected"], drill_id)
 
     def _handle_character_data_update(self, event: dict) -> None:
@@ -702,6 +862,11 @@ class Service:
         moves = event.get("moves")
         if not character_id or not isinstance(moves, list):
             log.warning("character_data_update with no character_id/moves, ignoring")
+            return
+
+        if not isinstance(character_id, str) or not re.fullmatch(r"[a-z0-9_]{1,32}", character_id):
+            log.warning("character_data_update with an invalid character_id %r -- discarded",
+                        character_id)
             return
 
         by_notation: dict = {}
@@ -752,11 +917,19 @@ class Service:
 
         if not character_id or not rows:
             return
-        path = self.install_dir / "frame_data_connected" / f"{character_id}.json"
+
+        if not isinstance(character_id, str) or not re.fullmatch(r"[a-z0-9_]{1,32}", character_id):
+            log.warning("observed move timings with an invalid character_id %r -- discarded",
+                        character_id)
+            return
+
+        path = paths.observed_timings(self.data_dir, character_id)
+        legacy = self.install_dir / "frame_data_connected" / f"{character_id}.json"
         existing: dict = {}
         try:
-            if path.exists():
-                with open(path, encoding="utf-8") as f:
+            source = path if path.exists() else legacy
+            if source.exists():
+                with open(source, encoding="utf-8") as f:
                     existing = json.load(f) or {}
         except (OSError, ValueError):
             existing = {}
@@ -785,6 +958,7 @@ class Service:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(existing, f, indent=2, sort_keys=True)
             paths.atomic_replace(tmp, path)
+            move_timing.forget(character_id)
             log.info("observed move timings: %s -- %d updated, %d known",
                      character_id, added, len(existing))
         except OSError as err:
@@ -792,6 +966,10 @@ class Service:
 
     def _handle_open_dashboard(self) -> None:
 
+        if not paths.web_dashboard_installed():
+
+            log.info("open_dashboard_request: the web dashboard is not installed")
+            return
         import webbrowser
 
         url = self.dashboard_url
@@ -809,11 +987,30 @@ class Service:
             log.warning("set_drill_favorite_request for unknown drill_id=%s, ignoring", drill_id)
             return
         drill["favorite"] = bool(event.get("favorite"))
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after set_drill_favorite_request: %s", err)
-        else:
+        if self._changed(db, "set_drill_favorite_request"):
             log.info("set favorite=%s for drill=%s", drill["favorite"], drill_id)
+
+    def _handle_set_belt_drills(self, event: dict, db: dict) -> None:
+
+        if not paths.is_dev_install():
+            log.warning("set_belt_drills_request refused outside a dev install")
+            return
+        labels = event.get("labels") or {}
+        by_id = {d.get("id"): d for d in db.get("drills") or []}
+        set_n = cleared = skipped = 0
+        for drill_id, value in labels.items():
+            drill = by_id.get(drill_id)
+            if drill is None:
+                skipped += 1
+            elif value is None:
+                cleared += drill.pop(belts.FIELD, None) is not None
+            elif belts.is_belt_drill({belts.FIELD: value}):
+                drill[belts.FIELD] = value
+                set_n += 1
+            else:
+                skipped += 1
+        if self._changed(db, "set_belt_drills_request"):
+            log.info("belt drills: %d labelled, %d cleared, %d skipped", set_n, cleared, skipped)
 
     def _handle_set_drill_selection_bulk(self, event: dict, db: dict) -> None:
 
@@ -824,10 +1021,7 @@ class Service:
             if drill.get("id") in drill_ids:
                 drill["selected"] = selected
                 changed += 1
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after set_drill_selection_bulk_request: %s", err)
-        else:
+        if self._changed(db, "set_drill_selection_bulk_request"):
             log.info("set selected=%s for %d drill(s)", selected, changed)
 
     def _handle_merge_duplicates(self, event: dict, db: dict) -> None:
@@ -846,6 +1040,9 @@ class Service:
             log.warning("merge_duplicates_request for %s has nothing to merge", keep_id)
             return
 
+        if self._refuse_belt_drills("merge_duplicates_request", db, [keep_id] + merge_ids):
+            return
+
         members = [keep] + [by_id[i] for i in merge_ids]
         plan = duplicates.merge_plan(
             members, reviews_db.last_reviewed(self.stats_db_path))
@@ -853,26 +1050,74 @@ class Service:
 
             plan = {"merged": {"total_sessions": sum(
                 d.get("total_sessions") or 0 for d in members)}}
-        keep.update(plan["merged"])
 
-        for drill_id in merge_ids:
-            reviews_db.rekey_drill(self.stats_db_path, drill_id, keep_id)
-        db["drills"] = [d for d in drills if d.get("id") not in set(merge_ids)]
-        deleted_ids = db.setdefault("deleted_drill_ids", [])
+        merged = copy.deepcopy(db)
+        merged_keep = next(d for d in merged["drills"] if d.get("id") == keep_id)
+        merged_keep.update(plan["merged"])
+        merged["drills"] = [d for d in merged["drills"] if d.get("id") not in set(merge_ids)]
+        deleted_ids = merged.setdefault("deleted_drill_ids", [])
         for drill_id in merge_ids:
             if drill_id not in deleted_ids:
                 deleted_ids.append(drill_id)
 
-        ok, err = database.save(self.db_path, db)
+        merged.setdefault(PENDING_HISTORY_MOVES, []).append(
+            {"from_ids": list(merge_ids), "to_id": keep_id})
+
+        ok, err = self._save_now(merged)
         if not ok:
-            log.error("failed saving database after merge_duplicates_request: %s", err)
-        else:
-            log.info("merged %s into %s (sessions now %s)", merge_ids, keep_id,
-                     keep.get("total_sessions"))
+            log.error("failed saving database after merge_duplicates_request: %s -- "
+                      "nothing was merged and no review history moved", err)
+            return
+        db.clear()
+        db.update(merged)
+        log.info("merged %s into %s (sessions now %s)", merge_ids, keep_id,
+                 merged_keep.get("total_sessions"))
+
+        error = self._retry_history_moves(db)
+        if error is not None:
+
+            log.error("the review history of %s could not be moved onto %s yet (%s) -- "
+                      "it is queued and will be moved automatically", merge_ids,
+                      keep_id, error)
+
+    def _retry_history_moves(self, db: dict) -> str | None:
+
+        queue = db.get(PENDING_HISTORY_MOVES)
+        if not queue:
+            return None
+        remaining, error = [], None
+        for move in queue:
+            if error is not None:
+                remaining.append(move)
+                continue
+            if not (isinstance(move, dict) and isinstance(move.get("from_ids"), list)
+                    and isinstance(move.get("to_id"), str)):
+                log.warning("dropping a malformed queued history move: %r", move)
+                continue
+            try:
+                moved = reviews_db.rekey_drills(self.stats_db_path, move["from_ids"],
+                                                move["to_id"])
+            except sqlite3.Error as exc:
+                error = str(exc)
+                remaining.append(move)
+                continue
+            log.info("moved the review history of %s onto %s (%d session(s))",
+                     move["from_ids"], move["to_id"], sum(moved.values()))
+        if len(remaining) != len(queue):
+            if remaining:
+                db[PENDING_HISTORY_MOVES] = remaining
+            else:
+                db.pop(PENDING_HISTORY_MOVES, None)
+            self._changed(db, "a queued history move")
+        if error is not None:
+            log.debug("queued history move still waiting: %s", error)
+        return error
 
     def _handle_delete_drill(self, event: dict, db: dict) -> None:
 
         drill_id = event["drill_id"]
+        if self._refuse_belt_drills("delete_drill_request", db, [drill_id]):
+            return
         drills = db.get("drills") or []
         found = any(d.get("id") == drill_id for d in drills)
         if not found:
@@ -882,10 +1127,7 @@ class Service:
         deleted_ids = db.setdefault("deleted_drill_ids", [])
         if drill_id not in deleted_ids:
             deleted_ids.append(drill_id)
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after delete_drill_request: %s", err)
-        else:
+        if self._changed(db, "delete_drill_request"):
             log.info("deleted drill=%s", drill_id)
 
     UNKNOWN_BUCKET = "unknown"
@@ -935,10 +1177,7 @@ class Service:
         )
         for key in ("high", "mid", "low"):
             zones[key] = zones.get(key, 0) + int(delta.get(key, 0))
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after hit_zone_delta: %s", err)
-        else:
+        if self._changed(db, "hit_zone_delta"):
             log.info("hit_zone_delta(%s) character=%s vs=%s side=%s delta=%s",
                      "dealt" if root == "hit_zones_dealt" else "taken",
                      character_id, dummy_id, side, delta)
@@ -1009,7 +1248,8 @@ class Service:
                 "score": graded["score"],
                 "recommendations": graded["recommendations"],
             }
-            ok, err = database.save(self.db_path, db)
+
+            ok, err = self._save_now(db)
             if not ok:
                 log.error("failed saving match feedback: %s", err)
         log.info("match %s over (%s, %s): %d-%d won=%s score=%s, %d recommended",
@@ -1020,6 +1260,12 @@ class Service:
     def _handle_create_drill(self, event: dict, db: dict) -> None:
 
         drill = dict(event.get("drill") or {})
+
+        if drill.get(belts.FIELD) and not paths.is_dev_install():
+            log.info("create_drill_request: belt-drill dropped outside a dev install")
+            drill.pop(belts.FIELD, None)
+        elif not belts.is_belt_drill(drill):
+            drill.pop(belts.FIELD, None)
         base_id = drill.get("id") or "captured_drill"
         if not ids.valid_drill_id(base_id):
 
@@ -1039,10 +1285,7 @@ class Service:
             drill.setdefault(key, value)
         drill.setdefault("next_review", now)
         db.setdefault("drills", []).append(drill)
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after create_drill_request: %s", err)
-        else:
+        if self._changed(db, "create_drill_request"):
             log.info("created drill=%s", final_id)
 
     def _handle_reset_drill_schedule(self, event: dict, db: dict) -> None:
@@ -1065,10 +1308,7 @@ class Service:
             state["total_sessions"] = prior.get("total_sessions") or 0
             progress.apply_state(drill, character, state)
 
-        ok, err = database.save(self.db_path, db)
-        if not ok:
-            log.error("failed saving database after "
-                      "reset_drill_schedule_request: %s", err)
+        if not self._changed(db, "reset_drill_schedule_request"):
             return
         log.info("reset scheduling for drill=%s (characters: %s) -- due now",
                  drill_id, ", ".join(str(c) for c in characters) or "none")
@@ -1109,14 +1349,16 @@ class Service:
                 drill["streak"] = 0
                 merged_drills.append(drill)
 
-        example["drills"] = merged_drills
-        example["deleted_drill_ids"] = db.get("deleted_drill_ids")
+        for drill in merged_drills:
+            for state in (drill.get(progress.PROGRESS_KEY) or {}).values():
+                if isinstance(state, dict):
+                    state["next_review"] = now_iso
+                    state["total_sessions"] = 0
+                    state["streak"] = 0
 
-        example["hit_zones"] = db.get("hit_zones")
-        ok, err = database.save(self.db_path, example)
-        if not ok:
-            log.error("failed saving database after reset_deck_request: %s", err)
-        else:
+        example.update({key: value for key, value in db.items() if key != "drills"})
+        example["drills"] = merged_drills
+        if self._changed(example, "reset_deck_request"):
             log.info("deck reset (%d drills)", len(merged_drills))
         return example
 
@@ -1128,10 +1370,30 @@ class Service:
         if not any(d.exists() for d in dirs):
             return db
 
+        self._in_batch, self._batch_dirty, self._batch_pending = True, False, []
+        try:
+            db = self._process_events(dirs, db)
+            if self._batch_dirty:
+                ok, err = self._save_now(db)
+                if not ok:
+                    log.error("failed saving database after %d outbox event(s): %s -- "
+                              "kept in the outbox to replay", len(self._batch_pending), err)
+
+                    raise RuntimeError(f"outbox batch not saved: {err}")
+        except BaseException:
+
+            self._forget_db()
+            raise
+        finally:
+            self._in_batch, self._batch_dirty, self._batch_pending = False, False, []
+        return db
+
+    def _process_events(self, dirs, db: dict) -> dict:
+
         for path in sorted((f for d in dirs for f in d.glob("*.json")),
                            key=lambda f: f.name):
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     event = json.load(f)
                 if not isinstance(event, dict):
                     raise ValueError("not a JSON object")
@@ -1139,6 +1401,7 @@ class Service:
 
                 self._quarantine(path, e)
                 continue
+            changes_before = self._batch_changes
             try:
                 kind = event.get("event")
                 if kind == "rep_result":
@@ -1155,6 +1418,8 @@ class Service:
                     self._handle_merge_duplicates(event, db)
                 elif kind == "set_drill_selection_request":
                     self._handle_set_drill_selection(event, db)
+                elif kind == "set_belt_drills_request":
+                    self._handle_set_belt_drills(event, db)
                 elif kind == "set_drill_selection_bulk_request":
                     self._handle_set_drill_selection_bulk(event, db)
                 elif kind == "set_drill_favorite_request":
@@ -1187,10 +1452,10 @@ class Service:
 
                 self._quarantine(path, e)
                 raise
-            try:
-                path.unlink()
-            except OSError:
-                pass
+            if self._batch_changes != changes_before and self._batch_dirty:
+                self._batch_pending.append(path)
+            else:
+                self._delete_events([path])
         return db
 
     def _quarantine(self, path: Path, error: Exception) -> None:
@@ -1206,6 +1471,42 @@ class Service:
             log.error("outbox event %s failed (%s) and could not be moved aside (%s)",
                       path.name, error, move_error)
 
+    _combo_plan_key = None
+
+    def _write_combo_plan(self, db: dict) -> None:
+
+        running = live_status.running_combo(self.live_status_path)
+        if running is None:
+            return
+        drill_id, combo, played = running
+        drill = self._find_drill(db, drill_id) or {}
+        character = drill.get("character_id") or played
+        key = (drill_id, character, combo)
+        if key == self._combo_plan_key:
+            return
+        plan = combo_plan.build(drill_id, character, combo, self.data_dir)
+        if plan is None:
+            return
+        path = paths.combo_plan(self.data_dir)
+        tmp = path.with_suffix(".json.tmp")
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(plan, f)
+            paths.atomic_replace(tmp, path)
+            self._combo_plan_key = key
+        except OSError as err:
+            log.warning("could not write the combo plan: %s", err)
+
+    def _poll_once(self) -> None:
+
+        db = self._load_db()
+        db = self._process_outbox(db)
+
+        self._retry_history_moves(db)
+        self._retime_stored_patterns(db)
+        self._write_inbox(db)
+        self._write_combo_plan(db)
+
     def run_forever(self) -> None:
 
         self.outbox_dir.mkdir(parents=True, exist_ok=True)
@@ -1213,13 +1514,16 @@ class Service:
 
         self._prune_matches()
         try:
+            self._add_shipped_drills()
+        except Exception:
+
+            log.exception("adding shipped drills failed -- continuing")
+        try:
             while True:
                 try:
-                    db = self._load_db()
-                    db = self._process_outbox(db)
-                    self._retime_stored_patterns(db)
-                    self._write_inbox(db)
+                    self._poll_once()
                 except Exception:
+                    self._forget_db()
                     log.exception("poll cycle failed -- continuing")
                 time.sleep(POLL_SECONDS)
         except KeyboardInterrupt:
@@ -1228,10 +1532,17 @@ class Service:
         finally:
             log.info("beast_drills loop exited")
 
+def _fresh_schedule(drill: dict, now: str) -> None:
+
+    for key, value in scheduler.STARTING_STATE.items():
+        drill.setdefault(key, value)
+    drill.setdefault("next_review", now)
+    drill.setdefault("created_at", now)
+
 def main() -> None:
 
-    cfg = settings.load(DEFAULT_DATA_DIR)
-    install_dir, data_default = settings.resolve_roots(DEFAULT_DATA_DIR)
+    cfg = settings.load(DEFAULT_INSTALL_DIR)
+    install_dir, data_default = settings.resolve_roots(DEFAULT_INSTALL_DIR)
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

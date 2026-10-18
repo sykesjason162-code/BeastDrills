@@ -130,6 +130,42 @@ def _motion_of(display) -> str:
 
     return _normalize(str(display or "").split("+")[0])
 
+SPECIAL_TOKEN = "SPECIAL"
+SPECIAL_RANGE = range(900, 1200)
+_MOTION_MOVE = re.compile(r"^(?:j\.)?(?:\[\d\]\d+|\d{2,})\+")
+_special_cache: dict = {}
+
+def is_any_special(token) -> bool:
+    return str(token or "").strip().upper() == SPECIAL_TOKEN
+
+def special_ids(character_id: str, data_dir=None):
+
+    if not character_id:
+        return None
+    key = character_id.lower()
+    if key in _special_cache:
+        return _special_cache[key]
+    stem = _CHARACTER_FILES.get(key)
+    path = _CATALOG_DIR / f"{stem}.json" if stem else None
+    ids = None
+    if path and path.exists():
+        try:
+            with open(path, encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, ValueError):
+            raw = None
+        found = set()
+        for action_id, entry in (raw or {}).items():
+            if not str(action_id).isdigit() or not isinstance(entry, dict):
+                continue
+            aid = int(action_id)
+            display = str((entry.get("classic_command") or {}).get("display") or "")
+            if aid in SPECIAL_RANGE or (aid < SPECIAL_RANGE.start and _MOTION_MOVE.match(display)):
+                found.add(aid)
+        ids = found or None
+    _special_cache[key] = ids
+    return ids
+
 def resolve(character_id: str, notation: str, data_dir=None):
 
     table = load_catalog(character_id)
@@ -142,6 +178,12 @@ def resolve(character_id: str, notation: str, data_dir=None):
 
     ids: set = set()
     for branch in branches:
+        if is_any_special(branch):
+            found = special_ids(character_id, data_dir)
+            if not found:
+                return None
+            ids |= found
+            continue
         found = next((f for f in (table.get(c) for c in _candidates(branch)) if f), None)
         if not found:
             found = _followup(character_id, table, branch, data_dir)

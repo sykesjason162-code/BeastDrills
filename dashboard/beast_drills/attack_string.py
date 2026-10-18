@@ -11,6 +11,8 @@ _ELLIPSIS = ("...", "…")
 
 GAP = None
 
+ANY_SPECIAL = "special"
+
 def is_gap(token):
     return isinstance(token, str) and token.strip() in _ELLIPSIS
 
@@ -125,6 +127,9 @@ def parse_attack_string(text, errors=None, line_no=1):
             continue
 
         token = strip_movement_prefix(token)
+        if token.strip().upper() == "SPECIAL":
+            attacks.append(ANY_SPECIAL)
+            continue
 
         if _CHARGE_PREFIX.match(token):
             pass
@@ -163,6 +168,8 @@ def _motion_to_matchable(token, bits):
 
 def _matches(required, landed):
 
+    if required is ANY_SPECIAL:
+        return False
     return (landed & required) == required
 
 def check_attack_string(spec_attacks, landed_attacks):

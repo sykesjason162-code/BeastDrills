@@ -44,6 +44,7 @@ FIELDS = {
     "response": ("fixed_expected_response",),
 
     "type": (),
+    "belt": (),
     "selected": (),
     "favorite": (),
     "fav": (),
@@ -108,6 +109,14 @@ def _matches_term(drill: dict, term: Term, now: str | None) -> bool:
 
     if term.field == "type":
         return needle in drill_types(drill)
+
+    if term.field == "belt":
+        tag = drill.get("_belt")
+        if needle in ("yes", "true", "1", "any"):
+            return bool(tag)
+        if needle in ("no", "false", "0", "none"):
+            return not tag
+        return bool(tag) and needle in (tag["belt"], tag["skill"], tag["skill_label"].lower())
 
     if term.field == "due":
         due = bool(now and drill.get("next_review") and drill["next_review"] <= now)

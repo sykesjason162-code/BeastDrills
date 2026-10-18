@@ -54,6 +54,10 @@
         <span class="filter-field-label">Dummy</span>
         <select id="filter-dummy"><option value="">All</option></select>
       </div>
+      <div class="filter-field">
+        <span class="filter-field-label" data-t>Belt</span>
+        <select id="filter-belt"><option value="">All</option></select>
+      </div>
       <div class="filter-status">
         <span id="filter-count" class="dim"></span>
         <button id="filter-clear-btn" type="button" class="btn filter-clear hidden" data-t>Clear filters</button>
@@ -99,6 +103,9 @@
       <h3 id="modal-title">New Drill</h3>
       <button id="modal-close" class="btn-icon">&times;</button>
     </div>
+    <!-- Which belt this drill counts toward, on both tabs, kept current as
+         the WongScript changes (belt-drill: line). -->
+    <p id="f-belt-note" class="belt-note-line"></p>
     <div class="modal-tabs">
       <button type="button" id="tab-form-btn" class="tab-btn tab-active" data-t>Form</button>
       <button type="button" id="tab-wong-btn" class="tab-btn" data-t>WongScript</button>
@@ -111,6 +118,14 @@
         <label>Character (player)<select id="f-character"></select></label>
         <label>Dummy (opponent)<select id="f-dummy-character"></select></label>
       </div>
+
+      <!-- On the form so a save sends what is really there: difficulty
+           was missing from it, so saving a drill through the form used to
+           clear its difficulty. Skill and belt are NOT here: they come
+           from the shipped curriculum, never from the player (Jason,
+           2026-10-17: "If we let them edit it, they will just add whatever
+           they want and say they are a blackbelt."). -->
+      <label><span data-t>Difficulty</span><select id="f-difficulty"></select></label>
 
       <div class="section-divider">Trains against</div>
       <div class="section">
@@ -279,6 +294,12 @@
       </div>
     </div>
     <div class="modal-foot">
+      <!-- An official drill opens read-only: everything, WongScript
+           included, is there to read, and nothing can be changed (Jason,
+           2026-10-17: "I don't think we should hide the curriculm
+           wongscript. Only have it locked/readonly."). -->
+      <span id="modal-readonly-note" class="hint modal-readonly-note hidden" data-t>Official drill: part of the belt curriculum, so it is read-only. Make a copy to change it; a copy counts toward no belt.</span>
+      <button id="modal-copy" class="btn btn-accent hidden" data-t>Make a copy</button>
       <button id="modal-save" class="btn btn-accent" data-t>Save</button>
       <button id="modal-cancel" class="btn" data-t>Cancel</button>
     </div>

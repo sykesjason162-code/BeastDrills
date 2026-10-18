@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import json
+import re
+import time
 from pathlib import Path
 
 LISTS = ("grades", "range_points", "combo_hits", "rep_avoided", "reps")
 
-def load(path) -> dict:
+MAX_AGE_SECONDS = 24 * 60 * 60
+
+def _started_at(session_id) -> int | None:
+
+    match = re.match(r"\d+", session_id) if isinstance(session_id, str) else None
+    return int(match.group()) if match else None
+
+def load(path, now: float | None = None) -> dict:
 
     try:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -14,9 +23,13 @@ def load(path) -> dict:
     if not isinstance(raw, dict):
         return {}
 
+    now = time.time() if now is None else now
     out: dict = {}
     for session_id, state in raw.items():
         if not isinstance(state, dict):
+            continue
+        started = _started_at(session_id)
+        if started is not None and now - started > MAX_AGE_SECONDS:
             continue
         lists = {name: state.get(name) for name in LISTS}
         if not all(isinstance(v, list) for v in lists.values()):

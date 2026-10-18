@@ -73,6 +73,14 @@ def block_check(snapshot: dict) -> str:
         return "hit"
     return "miss"
 
+def parry_check(snapshot: dict) -> str:
+
+    if snapshot.get("p1_hit"):
+        return "damage_taken"
+    if snapshot.get("p2_parried"):
+        return "hit"
+    return "miss"
+
 def perfect_parry_check(snapshot: dict) -> str:
 
     return "hit" if snapshot.get("p2_perfect_parried") else "miss"
@@ -152,6 +160,7 @@ CHECKERS = {
     "drive_impact_counter": drive_impact_counter_check,
     "drive_impact_vs_di": drive_impact_vs_di_check,
     "block": block_check,
+    "parry": parry_check,
     "perfect_parry": perfect_parry_check,
     "reversal": reversal_check,
     "throw_tech": throw_tech_check,

@@ -15,6 +15,12 @@
       beast_drills.dashboard  the web UI, on whatever address
                               beast_drills.ini says (8765 by default)
 
+    THE WEB DASHBOARD IS OPTIONAL (0.2). The release is two Fluffy options,
+    Core and Web Dashboard, so a player can run their own dashboard against
+    the service's files instead. With Core alone there is no dashboard.py,
+    and this starts the service by itself -- and never asks about Flask,
+    which only the web dashboard needs.
+
     SETTINGS COME FROM beast_drills.ini, not from here. This used to pass
     --port 8765 on every launch, which silently OVERRODE the settings
     file -- a player could edit the port, restart, and watch nothing
@@ -40,12 +46,18 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+# Every lookup of Beast Drills' own processes uses this one filter. Running
+# (below) used to match only python.exe while -Stop also matched pythonw.exe,
+# so a copy under pythonw was invisible to the start check and a second one
+# was launched beside it.
+$pythonProcesses = "Name='python.exe' OR Name='pythonw.exe'"
+
 # STOPPING, which used to be impossible. Both processes start hidden, and
 # this script told players to "close the windows to stop it" -- there are
 # no windows. Only processes running Beast Drills' own modules are
 # touched, matched on the module name in their command line.
 if ($Stop) {
-    $ours = @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" |
+    $ours = @(Get-CimInstance Win32_Process -Filter $pythonProcesses |
         Where-Object { $_.CommandLine -match 'beast_drills\.(service|dashboard)' })
     $ours | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     if ($ours.Count) { Write-Host "Beast Drills stopped." -ForegroundColor Green }
@@ -58,6 +70,11 @@ $dash = Join-Path $here 'dashboard'
 if (-not (Test-Path (Join-Path $dash 'beast_drills'))) {
     throw "Cannot find the dashboard next to this script. Keep start_dashboard.ps1 in the folder it shipped in."
 }
+# Asked of the files, the same test the service makes
+# (paths.web_dashboard_installed), so the two cannot disagree.
+$web = (Test-Path (Join-Path $dash 'beast_drills\dashboard.py')) -and
+       (Test-Path (Join-Path $dash 'beast_drills\templates')) -and
+       (Test-Path (Join-Path $dash 'beast_drills\static'))
 
 $python = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $python) {
@@ -84,8 +101,9 @@ if ($LASTEXITCODE -ne 0) {
 # Drills promises it does not talk to the internet on its own. So the
 # player is told what is missing and chooses; a "no" says how to do it by
 # hand. Once installed this never asks again.
-& $python -c "import flask" 2>$null
-if ($LASTEXITCODE -ne 0) {
+$flask = 0
+if ($web) { & $python -c "import flask" 2>$null; $flask = $LASTEXITCODE }
+if ($flask -ne 0) {
     Write-Host "The dashboard needs one Python package, Flask, which is not installed." -ForegroundColor Yellow
     if ($NoPrompt) {
         # Started hidden by the game: installing means a download, and that
@@ -109,14 +127,16 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 function Running($pattern) {
-    @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+    @(Get-CimInstance Win32_Process -Filter $pythonProcesses |
         Where-Object { $_.CommandLine -match $pattern }).Count
 }
 
 # Started one at a time with a check after each. Launching both at once
 # has produced duplicate processes on this platform before, and a second
 # copy of the service writing the same database is worth avoiding.
-foreach ($mod in 'beast_drills.service', 'beast_drills.dashboard') {
+$modules = @('beast_drills.service')
+if ($web) { $modules += 'beast_drills.dashboard' }
+foreach ($mod in $modules) {
     if ((Running ([regex]::Escape($mod))) -gt 0) {
         Write-Host "$mod is already running." -ForegroundColor DarkGray
         continue
@@ -126,13 +146,15 @@ foreach ($mod in 'beast_drills.service', 'beast_drills.dashboard') {
     # files no manager installed -- left behind on uninstall, and flagged
     # as outside changes. The two processes start once a session, so the
     # cache saved nothing worth that.
-    $args = @('-B', '-m', $mod)
+    # $pyArgs, not $args: that is PowerShell's automatic variable for this
+    # script's own arguments.
+    $pyArgs = @('-B', '-m', $mod)
     # Only when explicitly asked. Otherwise the dashboard reads
     # beast_drills.ini itself.
     if ($mod -eq 'beast_drills.dashboard' -and $Port -gt 0) {
-        $args += @('--port', "$Port")
+        $pyArgs += @('--port', "$Port")
     }
-    Start-Process -FilePath $python -ArgumentList $args -WorkingDirectory $dash -WindowStyle Hidden
+    Start-Process -FilePath $python -ArgumentList $pyArgs -WorkingDirectory $dash -WindowStyle Hidden
     Start-Sleep -Seconds 3
     if ((Running ([regex]::Escape($mod))) -eq 0) {
         Write-Host "$mod did not start." -ForegroundColor Red
@@ -150,10 +172,18 @@ foreach ($mod in 'beast_drills.service', 'beast_drills.dashboard') {
 $url = "http://localhost:8765"
 try {
     Push-Location $dash
-    $asked = & $python -B -c "from beast_drills import service, settings; print(settings.dashboard_url(settings.load(service.DEFAULT_DATA_DIR)))" 2>$null
+    $asked = & $python -B -c "from beast_drills import service, settings; print(settings.dashboard_url(settings.load(service.DEFAULT_INSTALL_DIR)))" 2>$null
     if ($LASTEXITCODE -eq 0 -and $asked) { $url = "$asked".Trim() }
 } catch { } finally { Pop-Location }
 if ($Port -gt 0) { $url = "http://localhost:$Port" }
+
+if (-not $web) {
+    Write-Host ""
+    Write-Host "Beast Drills is running, without the web dashboard (it is not installed)." -ForegroundColor Cyan
+    Write-Host "Leave it running while you play; to stop it, run Stop Beast Drills.bat."
+    Write-Host "Settings: reframework\data\BeastDrills_data\beast_drills.ini" -ForegroundColor DarkGray
+    exit 0
+}
 
 Write-Host ""
 Write-Host "Beast Drills is running at $url" -ForegroundColor Cyan

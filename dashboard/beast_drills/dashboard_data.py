@@ -1,7 +1,7 @@
 import calendar
 import time
 
-from . import deck, game_speed, grader, progress
+from . import deck, grader, progress
 
 GRADE_LABELS = {grader.AGAIN: "Again", grader.HARD: "Hard", grader.GOOD: "Good", grader.EASY: "Easy"}
 
@@ -21,21 +21,19 @@ def bucket_drill(drill: dict, character_id: str | None = None) -> str:
 
 def reviews_to_history_rows(reviews: list) -> list:
 
-    rows = []
-    for r in reviews:
-        rows.append(
-            {
-                "date": time.strftime("%Y-%m-%d", time.localtime(r["timestamp"])),
-                "attempts": r.get("attempts"),
-                "successes": r.get("successes"),
-                "final_grade": r.get("final_grade"),
+    return [
+        {
+            "date": time.strftime("%Y-%m-%d", time.localtime(r["timestamp"])),
+            "attempts": r.get("attempts"),
+            "successes": r.get("successes"),
+            "final_grade": r.get("final_grade"),
 
-                "character_id": r.get("character_id"),
-                "dummy_character_id": r.get("dummy_character_id"),
-                "start_side": r.get("start_side"),
-            }
-        )
-    return rows
+            "character_id": r.get("character_id"),
+            "dummy_character_id": r.get("dummy_character_id"),
+            "start_side": r.get("start_side"),
+        }
+        for r in reviews
+    ]
 
 def compute_grade_stats(history: list) -> dict:
 

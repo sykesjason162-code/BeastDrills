@@ -162,14 +162,14 @@ def explain(text: str, snapshot: dict):
     reasons = []
     for sequence in parse(text):
         ticks = [seen.get(ATOMS[term]) for term in sequence]
-        missing = [t for t, tick in zip(sequence, ticks) if tick is None]
+        missing = [t for t, tick in zip(sequence, ticks, strict=True) if tick is None]
         if missing:
             reasons.append(f"{' > '.join(sequence)}: never happened: "
                            + ", ".join(missing))
             continue
-        if all(a < b for a, b in zip(ticks, ticks[1:])):
+        if all(a < b for a, b in zip(ticks, ticks[1:], strict=False)):
             return "hit", None
         reasons.append(
             f"{' > '.join(sequence)}: all happened, wrong order: "
-            + ", ".join(f"{t}@{tick}" for t, tick in zip(sequence, ticks)))
+            + ", ".join(f"{t}@{tick}" for t, tick in zip(sequence, ticks, strict=True)))
     return "miss", "; ".join(reasons) + trailer

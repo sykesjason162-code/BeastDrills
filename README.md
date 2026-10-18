@@ -66,23 +66,41 @@ it.
   REFramework's .NET plugin support runs on it.
 - **Python 3.10 or newer**, from <https://www.python.org/downloads/>. Tick
   **"Add python.exe to PATH"** during install; the launcher needs to find it.
-- **Flask**, one Python package the dashboard uses. You do not need to
+- **Flask**, one Python package the web dashboard uses. You do not need to
   install it yourself: the first time you run the launcher it notices it is
   missing and **asks** before installing it. That is the only time anything
-  here downloads anything, and only if you say yes.
+  here downloads anything, and only if you say yes. Without the Web
+  Dashboard option (below) Flask is never needed or asked about.
 
 ## Installing
+
+Beast Drills comes as **two options in one zip**:
+
+- **Beast Drills - Core** — required. The in-game mod and the background
+  service that grades and schedules your drills.
+- **Beast Drills - Web Dashboard** — optional. The browser pages: your
+  drills, stats, matches and the WongScript editor. Leave it out only if
+  you use a dashboard of your own (see *Using your own dashboard*).
 
 Any of these three ends up in the same place. It does not matter which
 drive your Steam library is on.
 
 - **Vortex:** use **Mod Manager Download** on the Files tab, then enable and
   deploy. Vortex's Street Fighter 6 support hands the mod to Fluffy Mod
-  Manager, so open Fluffy afterwards and make sure Beast Drills is ticked.
+  Manager, so open Fluffy afterwards and tick the options you want.
 - **Fluffy Mod Manager:** put the zip, unopened, into Fluffy's
-  `Games\StreetFighter6\Mods` folder, refresh, and tick Beast Drills.
-- **By hand:** extract the zip into your Street Fighter 6 folder, so that
-  `reframework\` merges with the one already there.
+  `Games\StreetFighter6\Mods` folder and refresh. Beast Drills shows as one
+  entry with both options inside: tick **Core**, and **Web Dashboard**
+  unless you are using your own.
+- **By hand:** the zip holds two folders. Copy what is inside
+  `Beast Drills - Core` into your Street Fighter 6 folder, so that
+  `reframework\` merges with the one already there, then do the same with
+  `Beast Drills - Web Dashboard` if you want it. (The `modinfo.ini` and
+  `screenshot.png` in each are for Fluffy; you can leave them out.)
+
+**Upgrading from 0.1:** the options have new names. If Fluffy still lists
+the old single "Beast Drills" entry, untick it before ticking the new ones,
+so the two do not install over each other.
 
 Whichever you use, these land in your Street Fighter 6 folder:
 
@@ -116,7 +134,8 @@ files. Your drills in `Documents\Beast Drills` are not touched either way.
 1. The **first time**, double-click **`Start Beast Drills.bat`** in the game
    folder. It may ask to install Flask (see above), then runs in the
    background with no window of its own and opens your browser at
-   <http://localhost:8765>, or wherever `beast_drills.ini` says.
+   <http://localhost:8765>, or wherever `beast_drills.ini` says. (With
+   Core alone it starts only the service, and opens nothing.)
    After that, **the game starts it for you**: when Street Fighter 6 starts
    and Beast Drills is not running, it starts it in the background (no
    browser). The menu bar reads **Starting** for a few seconds while it
@@ -211,6 +230,26 @@ community where players show the parts of their practice they want seen and
 keep the rest behind a login, go ahead and build it -- the data is plain
 JSON and the server is yours.
 
+### Using your own dashboard
+
+Install **Core** only. The service keeps running without the Web Dashboard
+option, the launcher stops asking about Flask, and the in-game menu says
+the dashboard is not installed instead of offering a page that is not
+there. Everything a dashboard needs is in `Documents\Beast Drills`:
+
+- `shared_database.json` -- your drills and their schedule.
+- `stats.db` -- SQLite: every session's result, and every match round by
+  round.
+- `runtime\live_status.json` -- what the game sees right now, rewritten
+  every frame.
+
+**Read those, but do not write them.** The service owns them and will
+overwrite your changes. To change something, drop an event into `outbox\`
+-- one JSON file per change, written to a `.tmp` name and then renamed, so
+the service never reads half a file. `dashboard\beast_drills\outbox_writer.py`
+in Core does exactly that, and the Web Dashboard's `dashboard.py` is a
+working example of every event it sends.
+
 Beast Drills itself never talks to the internet. It does not phone home,
 check for updates or send anything anywhere. The dashboard is a local
 server for the ordinary reason: so two programs can read the same file.
@@ -224,6 +263,23 @@ what the drill wants; **Start Drill** begins it, and the rep counter sits at
 the right-hand end of the menu bar.
 
 That is the whole loop. Everything below is optional.
+
+**You start with 10 drills ticked for practice.** Over 2,300 more come with
+it — combos for every character (from the SuperCombo wiki) and the belt
+drills — waiting in the library. Tick the ones you want in **DRILLS** or on
+the dashboard's Drills page; with nothing ticked, everything is in rotation.
+
+- **Combo drills show the combo on screen**, the way SF6's Combo Trials do:
+  the steps down the left, each lighting up when you land *that* move, with
+  DR / AIR / HOLD beside the steps that need them, and **SUCCESS** when the
+  rep is a success. Turn it off with **VIEW → Combo Steps**, or the
+  checkbox on a combo drill's briefing.
+- **Belts.** Belt drills — marked with a belt icon on the Drills page — are
+  the curriculum: White through Black, a set of skills each. Your belt for
+  each character is worked out from how you do on them, and shown on your
+  profile. They work like any drill, but are read-only so they cannot be
+  changed by accident; **Duplicate** one to make your own version (a copy
+  does not count toward a belt).
 
 - **TALLY** counts what happened both ways — what you did to them and what
   they did to you — across a session or a whole practice night.
@@ -346,6 +402,14 @@ for `BeastDrills.dll` under `reframework\plugins\managed\`. Then open
   stops writing to the game as soon as it detects an online match, but it
   does not yet pause the session, so you return to a drill that is still
   counting. Stop it first (**Numpad 2**) and start again afterwards.
+- **The belt drills are first drafts.** The curriculum's 155 hand-written
+  drills have not all been played through yet, so some will need their
+  timing or criteria adjusted. Report one that grades wrong and it will be
+  fixed in an update.
+- **Belts come from drill results only.** A rank test in real matches is
+  planned for a later 0.2 update.
+- **PC, WHIFF and frame counts are not shown on combo steps.** No drill's
+  notation can say them yet.
 
 ---
 
@@ -381,3 +445,9 @@ which is also how you share them with someone else.
 ---
 
 Beast Drills is free. It is not affiliated with or endorsed by Capcom.
+
+## Credits
+
+The combo drills and the frame data come from the
+[SuperCombo wiki](https://wiki.supercombo.gg/w/Street_Fighter_6) and its
+contributors. Each combo drill names it in its description.

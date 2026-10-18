@@ -165,8 +165,7 @@ def write_example(data_dir) -> Path:
         if section != current:
             lines.append(f"[{section}]")
             current = section
-        for line in comment.split("\n"):
-            lines.append(f"# {line}")
+        lines.extend(f"# {line}" for line in comment.split("\n"))
         shown = default
         if isinstance(default, bool):
             shown = "true" if default else "false"

@@ -121,8 +121,7 @@ def _records(database, character_id, dummy_character_id):
         for dummy, state in (dummies or {}).items():
             if dummy_character_id is not None and dummy != dummy_character_id:
                 continue
-            for session in (state or {}).get("sessions") or []:
-                pools.append(session)
+            pools.extend((state or {}).get("sessions") or [])
 
     for char, opponents in ((database or {}).get("matches") or {}).items():
         if character_id is not None and char != character_id:

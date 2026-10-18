@@ -334,20 +334,82 @@ function wireShare() {
   }
 }
 
+const beltT = (str) => (window.i18n ? window.i18n.T(str) : str);
+let beltSeq = 0;
+
+async function renderBelt() {
+  const host = document.getElementById("pf-belt");
+  if (!host) return;
+  const seq = ++beltSeq;
+  if (shared) {
+    host.innerHTML = `<p class="muted">${escapeBelt(beltT(
+      "Belts are worked out from your own drill history, so a shared profile does not carry one."))}</p>`;
+    return;
+  }
+  const data = await getJSON("/api/profile/belt?character=" + encodeURIComponent(selected));
+  if (seq !== beltSeq) return;
+  if (!data || !data.belts) { host.textContent = ""; return; }
+
+  const ladder = data.belts.map((b) =>
+    `<span class="belt-step belt-${b.id}${b.earned ? " is-earned" : ""}${b.id === data.next ? " is-next" : ""}"
+          title="${escapeBelt(beltT(b.name) + " — " + b.ranks)}">${escapeBelt(beltT(b.name))}</span>`).join("");
+
+  const current = data.belt
+    ? `<div class="belt-now belt-${data.belt}"><b>${escapeBelt(beltT(data.belt_name))}</b> ${escapeBelt(beltT("belt"))}</div>`
+    : `<div class="belt-now"><b>${escapeBelt(beltT("No belt yet"))}</b></div>`;
+
+  let next = "";
+  const target = data.belts.find((b) => b.id === data.next);
+  if (target) {
+    const rows = target.skills.map((sk) => {
+      const state = {
+        passed: ["✓", beltT("passed")],
+        working: ["…", `${sk.passed} / ${sk.needed} ${beltT("drills at 70%")}`],
+        needs_drills: ["○", beltT("no drills yet")],
+        match_only: ["◇", beltT("graded in matches")],
+      }[sk.status] || ["", ""];
+      return `<li class="belt-skill is-${sk.status}"><span class="belt-mark">${state[0]}</span>
+        <span class="belt-skill-name">${escapeBelt(beltT(sk.label))}</span>
+        <span class="belt-skill-state">${escapeBelt(state[1])}</span></li>`;
+    }).join("");
+    next = `<h3 class="belt-next-title">${escapeBelt(beltT("Next:"))} ${escapeBelt(beltT(target.name))}
+      <span class="muted">${escapeBelt(target.ranks)}</span></h3><ul class="belt-skills">${rows}</ul>`;
+  } else if (data.belt) {
+    next = `<p>${escapeBelt(beltT("Every belt earned."))}</p>`;
+  }
+
+  const unplaced = data.unplaced
+    ? `<p class="muted belt-note">${escapeBelt(beltT("Only Beast Drills' own drills count toward a belt. Drills you make or import still train you; they just do not rank you."))}</p>`
+    : "";
+
+  host.innerHTML = `<div class="belt-ladder">${ladder}</div>${current}${next}${unplaced}`;
+}
+
+function escapeBelt(str) {
+  return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function render() {
   renderViewingBar();
-
+  // A shared profile carries SUMMARIES, not drills, so the panels that
+  // need individual drills have nothing to show for one. That is the
+  // trade the format makes on purpose -- see the export route -- and
+  // saying so beats rendering an empty list that looks like they have
+  // never practised.
   const s = shared ? sharedSummary(selected) : summarise(drillsFor(selected));
   renderHero(selected, s || summarise([]));
   renderDonut(s || summarise([]));
   renderZones(selected);
   renderTop(selected);
   renderTally();
+  renderBelt();
 }
 
 function renderPicker() {
   const sel = document.getElementById("pf-character");
-
+  // Anyone with drills or a hit-zone record first, then the rest -- the
+  // characters actually being played should not be buried in the roster.
   const played = new Set(
     shared
       ? Object.keys(shared.characters || {})

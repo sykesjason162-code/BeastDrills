@@ -72,6 +72,10 @@ def outbox(data_dir) -> Path:
 def inbox(data_dir) -> Path:
     return _p(data_dir, RUNTIME, "inbox.json")
 
+def combo_plan(data_dir) -> Path:
+
+    return _p(data_dir, RUNTIME, "combo_plan.json")
+
 def live_status(data_dir) -> Path:
     return _p(data_dir, RUNTIME, "live_status.json")
 
@@ -93,6 +97,10 @@ def debug_dir(data_dir) -> Path:
 
 def backups_dir(data_dir) -> Path:
     return _p(data_dir, BACKUPS)
+
+def observed_timings(data_dir, character_id) -> Path:
+
+    return _p(data_dir, PLAYER, "observed_timings", f"{character_id}.json")
 
 def ensure(data_dir) -> None:
 
@@ -165,9 +173,8 @@ def _windows_documents() -> Path | None:
     try:
         import ctypes
         buf = ctypes.create_unicode_buffer(260)
-        if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buf) == 0:
-            if buf.value:
-                return Path(buf.value)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buf) == 0 and buf.value:
+            return Path(buf.value)
     except Exception:
         pass
     return None
@@ -229,6 +236,13 @@ def set_install_dir(path) -> None:
 def is_dev_install() -> bool:
 
     return _INSTALL_DIR is not None and (_INSTALL_DIR / DEV_MARKER).exists()
+
+WEB_DASHBOARD_FILES = ("dashboard.py", "templates", "static")
+
+def web_dashboard_installed() -> bool:
+
+    here = Path(__file__).resolve().parent
+    return all((here / name).exists() for name in WEB_DASHBOARD_FILES)
 
 def reference_dir(data_dir, name) -> Path:
 

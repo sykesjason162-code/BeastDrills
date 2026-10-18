@@ -4,7 +4,7 @@ from pathlib import Path
 
 from . import paths
 
-from . import attack_string, attempts, move_catalog, move_timing
+from . import attack_string, attempts, belts, move_catalog, move_timing
 from . import criteria as _criteria
 from . import gauges as _gauges
 from .response_check import SUPPORTED as _SUPPORTED
@@ -414,6 +414,11 @@ def _resolve_skill_index(data_dir, dummy_char, reversal_type, skill_token, error
 
     stripped = skill_token.lstrip("-")
     if stripped.isdigit():
+
+        if stripped != skill_token:
+            _err(errors, line_no, f"skill={skill_token} is negative -- "
+                 f"use a move name or a number from 0 for type={reversal_type}")
+            return None
         return int(skill_token)
 
     name_wanted = skill_token.replace("-", " ").strip().lower()
@@ -485,377 +490,499 @@ def _render_categories(value):
         return ", ".join(_to_kebab(v) for v in value)
     return _to_kebab(value)
 
-def parse(text: str, data_dir: Path = None):
+_REVERSAL_KINDS = ("reversal", "block_reversal", "damage_reversal")
 
-    errors = []
-    name = None
-    description = ""
-    training_settings = {}
-    slot_outcomes = {}
-    fixed_expected_response = None
-    expected_setup = None
-    against_criteria = None
-    survive_seconds = None
-    fixed_expected_combo = None
-    response_window_frames = None
-    game_speed = None
-    reps = None
-    attempt_source = attempts.DEFAULT
-    character_id = None
-    dummy_char = None
-    repeat_replay = None
-    counter = None
-    require_slot = None
-    difficulty = None
-    trains = None
-    trains_for = None
-    recording_slots = []
+_SLOT_KEY_FOR_KIND = {
+    "reversal": "wake-up-rev-slot", "block_reversal": "block-rev-slot",
+    "damage_reversal": "damage-rev-slot",
+}
+_KIND_FOR_SLOT_KEY = {key: kind for kind, key in _SLOT_KEY_FOR_KIND.items()}
 
-    slot_lists = {"reversal": [], "block_reversal": [], "damage_reversal": []}
+class _ParseState:
 
-    current_kind = None
-    current_index = None
-    REVERSAL_KINDS = ("reversal", "block_reversal", "damage_reversal")
-    SLOT_KEY_FOR_KIND = {
-        "reversal": "wake-up-rev-slot", "block_reversal": "block-rev-slot",
-        "damage_reversal": "damage-rev-slot",
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
+        self.errors = []
+        self.name = None
+        self.description = ""
+        self.training_settings = {}
+        self.slot_outcomes = {}
+        self.fixed_expected_response = None
+        self.expected_setup = None
+        self.against_criteria = None
+        self.survive_seconds = None
+        self.fixed_expected_combo = None
+        self.response_window_frames = None
+        self.game_speed = None
+        self.reps = None
+        self.attempt_source = attempts.DEFAULT
+        self.character_id = None
+        self.dummy_char = None
+        self.repeat_replay = None
+        self.counter = None
+        self.require_slot = None
+        self.difficulty = None
+        self.belt_drill = None
+        self.trains = None
+        self.trains_for = None
+        self.recording_slots = []
+        self.slot_lists = {kind: [] for kind in _REVERSAL_KINDS}
+        self.current_kind = None
+        self.current_index = None
+
+        self.reversal_outcomes = []
+        self.reversal_actioned = set()
+
+    def err(self, line_no, message):
+        _err(self.errors, line_no, message)
+
+def _p_title(st, key, value, line_no):
+    st.name = value
+
+def _p_belt_drill(st, key, value, line_no):
+
+    value_obj, problem = belts.parse_belt_drill(value)
+    if problem:
+        st.err(line_no, problem)
+    else:
+        st.belt_drill = value_obj
+
+def _p_difficulty(st, key, value, line_no):
+    value_kebab = _to_kebab(value.strip().lower())
+    if value_kebab not in DIFFICULTY_VALUES:
+        st.err(line_no, f"unknown difficulty {value!r} -- "
+               f"expected one of {', '.join(DIFFICULTY_VALUES)}")
+    else:
+        st.difficulty = value_kebab
+
+_DESCRIPTION_ESCAPE = re.compile(r"\\([n\\])")
+
+def _p_description(st, key, value, line_no):
+
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        value = value[1:-1]
+    st.description = _DESCRIPTION_ESCAPE.sub(
+        lambda m: "\n" if m.group(1) == "n" else "\\", value)
+
+def _p_position(st, key, value, line_no):
+    if "," in value:
+
+        try:
+            p1_text, p2_text = value.split(",", 1)
+            st.training_settings["position"] = {
+                "p1_x": float(p1_text.strip()),
+                "p2_x": float(p2_text.strip()),
+            }
+        except ValueError:
+            st.err(line_no, f"malformed position coordinates '{value}'")
+        return
+    snake = _from_kebab(value)
+    if snake not in POSITION_PRESETS:
+        st.err(line_no, f"unknown position '{value}'")
+    else:
+        st.training_settings["position"] = snake
+
+def _p_gauge(st, key, value, line_no):
+    key = _from_kebab(key)
+
+    value_obj, problems = _gauges.parse_pair(key, value)
+    for message in problems:
+        st.err(line_no, message)
+
+    if value_obj:
+        st.training_settings[key] = value_obj
+
+def _p_cpu_level(st, key, value, line_no):
+    try:
+        level = int(value.strip())
+    except ValueError:
+        st.err(line_no, f"cpu-level: '{value}' is not a number -- 1 to 8")
+        return
+    problems = _gauges.cpu_level_errors(level)
+    for message in problems:
+        st.err(line_no, message)
+    if not problems:
+        st.training_settings["cpu_level"] = level
+
+def _p_block(st, key, value, line_no):
+    snake = _from_kebab(value)
+    if snake not in BLOCK_SETTINGS:
+        st.err(line_no, f"unknown block setting '{value}'")
+    else:
+        st.training_settings["block_setting"] = snake
+
+def _p_character(st, key, value, line_no):
+    snake = _from_kebab(value)
+    if snake not in CHARACTER_IDS:
+        st.err(line_no, f"unknown character '{value}'")
+    else:
+        st.character_id = snake
+
+def _p_dummy(st, key, value, line_no):
+    snake = _from_kebab(value)
+    if snake not in CHARACTER_IDS:
+        st.err(line_no, f"unknown dummy character '{value}'")
+    else:
+        st.dummy_char = snake
+
+def _p_reps(st, key, value, line_no):
+    if not value.isdigit() or int(value) <= 0:
+        st.err(line_no, f"reps must be a positive integer, got '{value}'")
+    else:
+        st.reps = int(value)
+
+def _p_attempts(st, key, value, line_no):
+
+    problems = attempts.errors(value)
+    if problems:
+        st.err(line_no, problems[0])
+    else:
+        st.attempt_source = attempts.normalize(value)
+
+def _p_game_speed(st, key, value, line_no):
+    if not value.isdigit() or not (0 <= int(value) <= 10):
+        st.err(line_no, f"game-speed must be 0-10, got '{value}'")
+    else:
+        st.game_speed = int(value)
+
+def _p_response_window(st, key, value, line_no):
+    if not value.isdigit() or int(value) <= 0:
+        st.err(line_no, f"response-window must be a positive integer, got '{value}'")
+    else:
+        st.response_window_frames = int(value)
+
+def _p_require_slot(st, key, value, line_no):
+
+    val = value.strip().lower()
+    if val in ("no", "false", "off"):
+        st.require_slot = False
+    elif val in ("yes", "true", "on"):
+        st.require_slot = True
+    else:
+        st.err(line_no, f"require-slot must be yes or no, got '{value}'")
+
+def _parse_tally_list(st, value, line_no, allowed, label, examples):
+
+    picked, bad = [], []
+    for raw in value.split(","):
+        token = _from_kebab(raw.strip())
+        if not token:
+            continue
+        (picked if token in allowed else bad).append(token)
+    if bad:
+        st.err(line_no,
+               f"{label}: unknown categor{'y' if len(bad) == 1 else 'ies'} "
+               f"{', '.join(bad)} -- expected {examples}")
+        return None
+    if not picked:
+        st.err(line_no, f"{label}: needs at least one category")
+        return None
+
+    return list(dict.fromkeys(picked))
+
+def _p_trains(st, key, value, line_no):
+
+    picked = _parse_tally_list(st, value, line_no, TRAINS_CATEGORIES, "trains",
+                               "receiver tallies like got_thrown, got_hit, got_blocked")
+    if picked is not None:
+        st.trains = picked
+
+def _p_trains_for(st, key, value, line_no):
+
+    picked = _parse_tally_list(st, value, line_no, TRAINS_FOR_CATEGORIES, "trains-for",
+                               "giver tallies like anti_air, hit_confirm, perfect_parry")
+    if picked is not None:
+        st.trains_for = picked
+
+def _p_counter(st, key, value, line_no):
+
+    val = value.strip().lower()
+    if val not in COUNTER_VALUES:
+        st.err(line_no, f"counter must be one of {', '.join(COUNTER_VALUES)}, got '{value}'")
+    else:
+        st.counter = val
+
+def _p_repeat_replay(st, key, value, line_no):
+    snake = _from_kebab(value)
+    if snake not in REPEAT_REPLAY_VALUES:
+        st.err(line_no, f"repeat-replay must be one of {', '.join(REPEAT_REPLAY_VALUES)}, got '{value}'")
+    else:
+        st.repeat_replay = snake
+
+def _p_rev_slot(st, key, value, line_no):
+    kind = _KIND_FOR_SLOT_KEY[key]
+    if not value.isdigit():
+        st.err(line_no, f"{key} needs a slot number, got '{value}'")
+        st.current_kind = None
+    elif int(value) > SLOT_KIND_MAX_INDEX[kind]:
+        st.err(line_no, f"{key} {value} is out of range -- Reversal Settings only has slots 0-{SLOT_KIND_MAX_INDEX[kind]} in-game")
+        st.current_kind = None
+    else:
+        st.current_kind = kind
+        st.current_index = int(value)
+
+def _p_rec_slot(st, key, value, line_no):
+    if not value.isdigit():
+        st.err(line_no, f"rec-slot needs a slot number, got '{value}'")
+        st.current_kind = None
+    elif int(value) > SLOT_KIND_MAX_INDEX["recording"]:
+        st.err(line_no, f"rec-slot {value} is out of range -- Recording Settings only has slots 0-{SLOT_KIND_MAX_INDEX['recording']} in-game")
+        st.current_kind = None
+    else:
+        st.current_kind = "recording"
+        st.current_index = int(value)
+        st.recording_slots.append({"index": st.current_index})
+
+def _p_action(st, key, value, line_no):
+
+    if st.current_kind == "recording":
+        _p_recording_action(st, value, line_no)
+    elif st.current_kind not in _REVERSAL_KINDS:
+        st.err(line_no, "action: needs an open wake-up-rev-slot:/block-rev-slot:/damage-rev-slot:/rec-slot: above it")
+    else:
+        _p_reversal_action(st, value, line_no)
+
+def _p_recording_action(st, value, line_no):
+    parsed_pattern = _parse_pattern_notation(value, st.errors, line_no)
+    if parsed_pattern is None:
+        return
+    st.recording_slots[-1]["pattern"] = parsed_pattern
+
+    st.recording_slots[-1]["action_text"] = value
+
+def _p_reversal_action(st, value, line_no):
+    m = _ACTION_RE.match(value)
+    if not m:
+        st.err(line_no,
+               f"malformed action line: '{value}' (expected 'type=<TYPE> skill=<name-or-n>, <n>f')")
+        return
+    rtype = m.group("type").upper().replace("-", "_")
+    if rtype not in REVERSAL_TYPE_TO_INT:
+        st.err(line_no, f"unknown reversal type '{m.group('type')}'")
+        return
+    skill_idx = _resolve_skill_index(st.data_dir, st.dummy_char, rtype, m.group("skill"),
+                                     st.errors, line_no)
+    if skill_idx is None:
+        return
+    delay = int(m.group("delay")) if m.group("delay") else 0
+    st.reversal_actioned.add((st.current_kind, st.current_index))
+    st.slot_lists[st.current_kind].append({
+        "index": st.current_index,
+        "type": REVERSAL_TYPE_TO_INT[rtype],
+        "skill_index": skill_idx,
+        "delay": delay,
+    })
+
+def _p_weight(st, key, value, line_no):
+
+    if st.current_kind != "recording":
+        st.err(line_no, "weight: needs an open rec-slot: above it")
+    elif not value.isdigit() or int(value) <= 0:
+        st.err(line_no, f"weight must be a positive integer, got '{value}'")
+    else:
+        st.recording_slots[-1]["weight"] = int(value)
+
+def _needs_open_slot(st, key, line_no):
+
+    if st.current_kind is None:
+        st.err(line_no, f"{key}: needs an open {'/'.join(_SLOT_KEY_FOR_KIND.values())}/rec-slot: above it")
+        return False
+    if st.current_kind in _REVERSAL_KINDS:
+        st.reversal_outcomes.append((st.current_kind, st.current_index, key, line_no))
+    return True
+
+def _check_reversal_outcomes(st):
+
+    for kind, index, key, line_no in st.reversal_outcomes:
+        if (kind, index) in st.reversal_actioned:
+            continue
+        message = (f"{key}: {_SLOT_KEY_FOR_KIND[kind]} {index} has no valid action: line, "
+                   f"so there is no slot for this outcome")
+        at = next((i for i, e in enumerate(st.errors) if e["line"] > line_no), len(st.errors))
+        st.errors.insert(at, {"line": line_no, "message": message})
+
+def _p_success(st, key, value, line_no):
+    if not _needs_open_slot(st, "success", line_no):
+        return
+    categories = _parse_categories(value, st.errors, line_no)
+    if categories is None:
+        return
+
+    entry = st.slot_outcomes.setdefault(str(st.current_index), {})
+    entry["expected_response"] = categories
+
+def _valid_combo(st, value, line_no):
+
+    combo_errors = []
+
+    _, combo_body = attack_string.split_mode(value)
+    if attack_string.parse_attack_string(combo_body, combo_errors, line_no) is None:
+        st.errors.extend(combo_errors)
+        return False
+    return True
+
+def _p_combo(st, key, value, line_no):
+
+    if not _needs_open_slot(st, "combo", line_no) or not _valid_combo(st, value, line_no):
+        return
+    entry = st.slot_outcomes.setdefault(str(st.current_index), {})
+    entry["expected_combo"] = value
+
+def _p_fixed_combo(st, key, value, line_no):
+    if _valid_combo(st, value, line_no):
+        st.fixed_expected_combo = value
+
+def _p_survive(st, key, value, line_no):
+
+    try:
+        seconds = int(value)
+    except ValueError:
+        st.err(line_no, f"survive: expected a number of seconds, got '{value}'")
+        return
+    if seconds < 1 or seconds > 99:
+        st.err(line_no, "survive: must be 1-99 seconds (a round is 99 at most)")
+    else:
+        st.survive_seconds = seconds
+
+def _parse_atoms(st, value, line_no, allowed, label):
+
+    names = [_from_kebab(t.strip()) for t in value.split(",") if t.strip()]
+    bad = [n for n in names if n not in allowed]
+    if bad:
+        st.err(line_no,
+               f"{label}: cannot name {bad[0]!r} -- only "
+               f"{', '.join(_to_kebab(a) for a in allowed)}")
+        return None
+    return names
+
+def _p_against(st, key, value, line_no):
+
+    names = _parse_atoms(st, value, line_no, _criteria.AGAINST_ATOMS, "against")
+    if names is not None:
+        st.against_criteria = names
+
+def _p_setup(st, key, value, line_no):
+
+    names = _parse_atoms(st, value, line_no, _criteria.SETUP_ATOMS, "setup")
+    if names is not None:
+        st.expected_setup = names
+
+def _p_fixed_success(st, key, value, line_no):
+    categories = _parse_categories(value, st.errors, line_no)
+    if categories is not None:
+        st.fixed_expected_response = categories
+
+_PARSE_HANDLERS = {
+    "title": _p_title,
+    "belt-drill": _p_belt_drill,
+    "difficulty": _p_difficulty,
+    "description": _p_description,
+    "position": _p_position,
+    "cpu-level": _p_cpu_level,
+    "cpu_level": _p_cpu_level,
+    "block": _p_block,
+    "character": _p_character,
+    "dummy": _p_dummy,
+    "reps": _p_reps,
+    attempts.FIELD: _p_attempts,
+    "game-speed": _p_game_speed,
+    "response-window": _p_response_window,
+    "require-slot": _p_require_slot,
+    "trains": _p_trains,
+    "trains-for": _p_trains_for,
+    "trains_for": _p_trains_for,
+    "counter": _p_counter,
+    "repeat-replay": _p_repeat_replay,
+    "wake-up-rev-slot": _p_rev_slot,
+    "block-rev-slot": _p_rev_slot,
+    "damage-rev-slot": _p_rev_slot,
+    "rec-slot": _p_rec_slot,
+    "action": _p_action,
+    "weight": _p_weight,
+    "success": _p_success,
+    "combo": _p_combo,
+    "fixed-combo": _p_fixed_combo,
+    "survive": _p_survive,
+    "against": _p_against,
+    "setup": _p_setup,
+    "fixed-success": _p_fixed_success,
+}
+
+def _handler_for(key):
+    handler = _PARSE_HANDLERS.get(key)
+    if handler is None and _from_kebab(key) in _gauges.PAIR_KEYS:
+        handler = _p_gauge
+    return handler
+
+def _finish_training_settings(st):
+    ts = st.training_settings
+    if st.recording_slots:
+        ts["recording_slots"] = st.recording_slots
+    if st.repeat_replay:
+        ts["repeat_replay"] = st.repeat_replay
+    if st.counter:
+        ts["counter"] = st.counter
+    if st.require_slot is not None:
+        ts["require_slot"] = st.require_slot
+    for kind, field in (("reversal", "reversal_slots"),
+                        ("block_reversal", "block_reversal_slots"),
+                        ("damage_reversal", "damage_reversal_slots")):
+        if st.slot_lists[kind]:
+            ts[field] = st.slot_lists[kind]
+    return ts
+
+def _finish_drill(st, text):
+    drill = {
+        "name": st.name,
+        "description": st.description,
+        "training_settings": _finish_training_settings(st),
+        "slot_outcomes": st.slot_outcomes or None,
+        "fixed_expected_response": st.fixed_expected_response,
+        "expected_setup": st.expected_setup,
+        "against_criteria": st.against_criteria,
+        "survive_seconds": st.survive_seconds,
+        "fixed_expected_combo": st.fixed_expected_combo,
+        "response_window_frames": st.response_window_frames,
+        "game_speed": st.game_speed,
+        "reps": st.reps,
+        attempts.FIELD: st.attempt_source,
+        "wongscript_text": text,
     }
 
+    drill.update({field: value for field, value in (
+        ("character_id", st.character_id),
+        ("dummy_character_id", st.dummy_char),
+        ("trains", st.trains),
+        ("trains_for", st.trains_for),
+        ("difficulty", st.difficulty),
+        (belts.FIELD, st.belt_drill),
+    ) if value})
+    return drill
+
+def parse(text: str, data_dir: Path = None):
+
+    st = _ParseState(data_dir)
     for line_no, raw_line in enumerate(text.splitlines(), start=1):
         line = raw_line.strip()
         if not line:
             continue
         if ":" not in line:
-            _err(errors, line_no, f"malformed line (expected 'key: value'): {raw_line}")
+            st.err(line_no, f"malformed line (expected 'key: value'): {raw_line}")
             continue
         key, _, value = line.partition(":")
         key = key.strip().lower()
-        value = value.strip()
-
-        if key == "title":
-            name = value
-        elif key == "difficulty":
-            value_kebab = _to_kebab(value.strip().lower())
-            if value_kebab not in DIFFICULTY_VALUES:
-                _err(errors, line_no, f"unknown difficulty {value!r} -- "
-                     f"expected one of {', '.join(DIFFICULTY_VALUES)}")
-            else:
-                difficulty = value_kebab
-        elif key == "description":
-
-            description = value.strip('"').replace("\\n", "\n")
-        elif key == "position" and "," in value:
-
-            try:
-                p1_text, p2_text = value.split(",", 1)
-                training_settings["position"] = {
-                    "p1_x": float(p1_text.strip()),
-                    "p2_x": float(p2_text.strip()),
-                }
-            except ValueError:
-                _err(errors, line_no, f"malformed position coordinates '{value}'")
-        elif key == "position":
-            snake = _from_kebab(value)
-            if snake not in POSITION_PRESETS:
-                _err(errors, line_no, f"unknown position '{value}'")
-            else:
-                training_settings["position"] = snake
-        elif _from_kebab(key) in _gauges.PAIR_KEYS:
-            key = _from_kebab(key)
-
-            value_obj, problems = _gauges.parse_pair(key, value)
-            for message in problems:
-                _err(errors, line_no, message)
-
-            if value_obj:
-                training_settings[key] = value_obj
-        elif key in ("cpu-level", "cpu_level"):
-            try:
-                level = int(value.strip())
-            except ValueError:
-                _err(errors, line_no, f"cpu-level: '{value}' is not a number -- 1 to 8")
-            else:
-                problems = _gauges.cpu_level_errors(level)
-                for message in problems:
-                    _err(errors, line_no, message)
-                if not problems:
-                    training_settings["cpu_level"] = level
-        elif key == "block":
-            snake = _from_kebab(value)
-            if snake not in BLOCK_SETTINGS:
-                _err(errors, line_no, f"unknown block setting '{value}'")
-            else:
-                training_settings["block_setting"] = snake
-        elif key == "character":
-            snake = _from_kebab(value)
-            if snake not in CHARACTER_IDS:
-                _err(errors, line_no, f"unknown character '{value}'")
-            else:
-                character_id = snake
-        elif key == "dummy":
-            snake = _from_kebab(value)
-            if snake not in CHARACTER_IDS:
-                _err(errors, line_no, f"unknown dummy character '{value}'")
-            else:
-                dummy_char = snake
-        elif key == "reps":
-            if not value.isdigit() or int(value) <= 0:
-                _err(errors, line_no, f"reps must be a positive integer, got '{value}'")
-            else:
-                reps = int(value)
-        elif key == attempts.FIELD:
-
-            problems = attempts.errors(value)
-            if problems:
-                _err(errors, line_no, problems[0])
-            else:
-                attempt_source = attempts.normalize(value)
-        elif key == "game-speed":
-            if not value.isdigit() or not (0 <= int(value) <= 10):
-                _err(errors, line_no, f"game-speed must be 0-10, got '{value}'")
-            else:
-                game_speed = int(value)
-        elif key == "response-window":
-            if not value.isdigit() or int(value) <= 0:
-                _err(errors, line_no, f"response-window must be a positive integer, got '{value}'")
-            else:
-                response_window_frames = int(value)
-        elif key == "require-slot":
-
-            val = value.strip().lower()
-            if val in ("no", "false", "off"):
-                require_slot = False
-            elif val in ("yes", "true", "on"):
-                require_slot = True
-            else:
-                _err(errors, line_no, f"require-slot must be yes or no, got '{value}'")
-        elif key == "trains":
-
-            picked, bad = [], []
-            for raw in value.split(","):
-                token = _from_kebab(raw.strip())
-                if not token:
-                    continue
-                (picked if token in TRAINS_CATEGORIES else bad).append(token)
-            if bad:
-                _err(errors, line_no,
-                     f"trains: unknown categor{'y' if len(bad) == 1 else 'ies'} "
-                     f"{', '.join(bad)} -- expected receiver tallies like "
-                     f"got_thrown, got_hit, got_blocked")
-            elif not picked:
-                _err(errors, line_no, "trains: needs at least one category")
-            else:
-
-                trains = list(dict.fromkeys(picked))
-        elif key in ("trains-for", "trains_for"):
-
-            picked, bad = [], []
-            for raw in value.split(","):
-                token = _from_kebab(raw.strip())
-                if not token:
-                    continue
-                (picked if token in TRAINS_FOR_CATEGORIES else bad).append(token)
-            if bad:
-                _err(errors, line_no,
-                     f"trains-for: unknown categor{'y' if len(bad) == 1 else 'ies'} "
-                     f"{', '.join(bad)} -- expected giver tallies like "
-                     f"anti_air, hit_confirm, perfect_parry")
-            elif not picked:
-                _err(errors, line_no, "trains-for: needs at least one category")
-            else:
-                trains_for = list(dict.fromkeys(picked))
-        elif key == "counter":
-
-            val = value.strip().lower()
-            if val not in COUNTER_VALUES:
-                _err(errors, line_no, f"counter must be one of {', '.join(COUNTER_VALUES)}, got '{value}'")
-            else:
-                counter = val
-        elif key == "repeat-replay":
-            snake = _from_kebab(value)
-            if snake not in REPEAT_REPLAY_VALUES:
-                _err(errors, line_no, f"repeat-replay must be one of {', '.join(REPEAT_REPLAY_VALUES)}, got '{value}'")
-            else:
-                repeat_replay = snake
-        elif key in ("wake-up-rev-slot", "block-rev-slot", "damage-rev-slot"):
-            kind = {"wake-up-rev-slot": "reversal", "block-rev-slot": "block_reversal",
-                    "damage-rev-slot": "damage_reversal"}[key]
-            if not value.isdigit():
-                _err(errors, line_no, f"{key} needs a slot number, got '{value}'")
-                current_kind = None
-            elif int(value) > SLOT_KIND_MAX_INDEX[kind]:
-                _err(errors, line_no, f"{key} {value} is out of range -- Reversal Settings only has slots 0-{SLOT_KIND_MAX_INDEX[kind]} in-game")
-                current_kind = None
-            else:
-                current_kind = kind
-                current_index = int(value)
-        elif key == "rec-slot":
-            if not value.isdigit():
-                _err(errors, line_no, f"rec-slot needs a slot number, got '{value}'")
-                current_kind = None
-            elif int(value) > SLOT_KIND_MAX_INDEX["recording"]:
-                _err(errors, line_no, f"rec-slot {value} is out of range -- Recording Settings only has slots 0-{SLOT_KIND_MAX_INDEX['recording']} in-game")
-                current_kind = None
-            else:
-                current_kind = "recording"
-                current_index = int(value)
-                recording_slots.append({"index": current_index})
-        elif key == "action":
-
-            if current_kind == "recording":
-                parsed_pattern = _parse_pattern_notation(value, errors, line_no)
-                if parsed_pattern is not None:
-                    recording_slots[-1]["pattern"] = parsed_pattern
-
-                    recording_slots[-1]["action_text"] = value
-                continue
-            if current_kind not in REVERSAL_KINDS:
-                _err(errors, line_no, "action: needs an open wake-up-rev-slot:/block-rev-slot:/damage-rev-slot:/rec-slot: above it")
-                continue
-            m = _ACTION_RE.match(value)
-            if not m:
-                _err(errors, line_no,
-                     f"malformed action line: '{value}' (expected 'type=<TYPE> skill=<name-or-n>, <n>f')")
-                continue
-            rtype = m.group("type").upper().replace("-", "_")
-            if rtype not in REVERSAL_TYPE_TO_INT:
-                _err(errors, line_no, f"unknown reversal type '{m.group('type')}'")
-                continue
-            skill_idx = _resolve_skill_index(data_dir, dummy_char, rtype, m.group("skill"), errors, line_no)
-            if skill_idx is None:
-                continue
-            delay = int(m.group("delay")) if m.group("delay") else 0
-            slot_lists[current_kind].append({
-                "index": current_index,
-                "type": REVERSAL_TYPE_TO_INT[rtype],
-                "skill_index": skill_idx,
-                "delay": delay,
-            })
-        elif key == "weight":
-
-            if current_kind != "recording":
-                _err(errors, line_no, "weight: needs an open rec-slot: above it")
-            elif not value.isdigit() or int(value) <= 0:
-                _err(errors, line_no, f"weight must be a positive integer, got '{value}'")
-            else:
-                recording_slots[-1]["weight"] = int(value)
-        elif key == "success":
-            if current_kind is None:
-                _err(errors, line_no, f"success: needs an open {'/'.join(SLOT_KEY_FOR_KIND.values())}/rec-slot: above it")
-                continue
-            categories = _parse_categories(value, errors, line_no)
-            if categories is None:
-                continue
-
-            entry = slot_outcomes.setdefault(str(current_index), {})
-            entry["expected_response"] = categories
-        elif key == "combo":
-
-            if current_kind is None:
-                _err(errors, line_no, f"combo: needs an open {'/'.join(SLOT_KEY_FOR_KIND.values())}/rec-slot: above it")
-                continue
-            combo_errors = []
-
-            _, _combo_body = attack_string.split_mode(value)
-            if attack_string.parse_attack_string(_combo_body, combo_errors, line_no) is None:
-                errors.extend(combo_errors)
-                continue
-            entry = slot_outcomes.setdefault(str(current_index), {})
-            entry["expected_combo"] = value
-        elif key == "fixed-combo":
-            combo_errors = []
-            _, _combo_body = attack_string.split_mode(value)
-            if attack_string.parse_attack_string(_combo_body, combo_errors, line_no) is None:
-                errors.extend(combo_errors)
-                continue
-            fixed_expected_combo = value
-        elif key == "survive":
-
-            try:
-                seconds = int(value)
-            except ValueError:
-                _err(errors, line_no, f"survive: expected a number of seconds, got '{value}'")
-            else:
-                if seconds < 1 or seconds > 99:
-                    _err(errors, line_no,
-                         "survive: must be 1-99 seconds (a round is 99 at most)")
-                else:
-                    survive_seconds = seconds
-        elif key == "against":
-
-            names = [_from_kebab(t.strip()) for t in value.split(",") if t.strip()]
-            bad = [n for n in names if n not in _criteria.AGAINST_ATOMS]
-            if bad:
-                _err(errors, line_no,
-                     f"against: cannot name {bad[0]!r} -- only "
-                     f"{', '.join(_to_kebab(a) for a in _criteria.AGAINST_ATOMS)}")
-            else:
-                against_criteria = names
-        elif key == "setup":
-
-            names = [_from_kebab(t.strip()) for t in value.split(",") if t.strip()]
-            bad = [n for n in names if n not in _criteria.SETUP_ATOMS]
-            if bad:
-                _err(errors, line_no,
-                     f"setup: cannot name {bad[0]!r} -- only "
-                     f"{', '.join(_to_kebab(a) for a in _criteria.SETUP_ATOMS)}")
-            else:
-                expected_setup = names
-        elif key == "fixed-success":
-            categories = _parse_categories(value, errors, line_no)
-            if categories is not None:
-                fixed_expected_response = categories
+        handler = _handler_for(key)
+        if handler is None:
+            st.err(line_no, f"unknown key '{key}'")
         else:
-            _err(errors, line_no, f"unknown key '{key}'")
+            handler(st, key, value.strip(), line_no)
+    _check_reversal_outcomes(st)
 
-    if name is None or not name.strip():
-        _err(errors, 0, "missing required 'title:' line")
-
-    if errors:
-        return None, errors
-
-    if recording_slots:
-        training_settings["recording_slots"] = recording_slots
-    if repeat_replay:
-        training_settings["repeat_replay"] = repeat_replay
-    if counter:
-        training_settings["counter"] = counter
-    if require_slot is not None:
-        training_settings["require_slot"] = require_slot
-    if slot_lists["reversal"]:
-        training_settings["reversal_slots"] = slot_lists["reversal"]
-    if slot_lists["block_reversal"]:
-        training_settings["block_reversal_slots"] = slot_lists["block_reversal"]
-    if slot_lists["damage_reversal"]:
-        training_settings["damage_reversal_slots"] = slot_lists["damage_reversal"]
-
-    drill = {
-        "name": name,
-        "description": description,
-        "training_settings": training_settings,
-        "slot_outcomes": slot_outcomes or None,
-        "fixed_expected_response": fixed_expected_response,
-        "expected_setup": expected_setup,
-        "against_criteria": against_criteria,
-        "survive_seconds": survive_seconds,
-        "fixed_expected_combo": fixed_expected_combo,
-        "response_window_frames": response_window_frames,
-        "game_speed": game_speed,
-        "reps": reps,
-        attempts.FIELD: attempt_source,
-        "wongscript_text": text,
-    }
-    if character_id:
-        drill["character_id"] = character_id
-    if dummy_char:
-        drill["dummy_character_id"] = dummy_char
-    if trains:
-        drill["trains"] = trains
-    if trains_for:
-        drill["trains_for"] = trains_for
-    if difficulty:
-        drill["difficulty"] = difficulty
-    return drill, []
+    if st.name is None or not st.name.strip():
+        st.err(0, "missing required 'title:' line")
+    if st.errors:
+        return None, st.errors
+    return _finish_drill(st, text), []
 
 def _split_into_drill_blocks(text: str):
 
@@ -904,35 +1031,67 @@ def render_bundle(drills, dummy_chars: dict = None, data_dir: Path = None) -> st
     ]
     return "\n".join(parts)
 
-def render(drill: dict, dummy_char: str = None, data_dir: Path = None) -> str:
+_SYNCED_KEYS = ("difficulty", "belt-drill")
 
-    if drill.get("wongscript_text"):
-        return drill["wongscript_text"]
-    dummy_char = dummy_char or drill.get("dummy_character_id")
+def _sync_cached_text(drill: dict) -> str:
+
+    text = drill["wongscript_text"]
+    want = {"difficulty": drill.get("difficulty") or None,
+            "belt-drill": belts.render_belt_drill(drill.get(belts.FIELD))}
+    lines = text.split("\n")
+    keyed = [l.split(":", 1)[0].strip().lower() for l in lines]
+    for key in _SYNCED_KEYS:
+        value = want[key]
+        if key in keyed:
+            i = keyed.index(key)
+            if value:
+                lines[i] = f"{key}: {value}"
+            else:
+                del lines[i]
+                del keyed[i]
+        elif value:
+
+            after = max((n for n, k in enumerate(keyed)
+                         if k in ("title", "description", "character", "difficulty")), default=0)
+            lines.insert(after + 1, f"{key}: {value}")
+            keyed.insert(after + 1, key)
+    return "\n".join(lines)
+
+def _render_position(position):
+
+    if isinstance(position, str) and position in POSITION_PRESETS:
+        return f"position: {_to_kebab(position)}"
+    if isinstance(position, dict) and "p1_x" in position and "p2_x" in position:
+
+        return f"position: {position['p1_x']}, {position['p2_x']}"
+    return None
+
+def _render_header(drill, ts, dummy_char):
+
     lines = [f"title: {drill.get('name') or ''}"]
     if drill.get("description"):
 
-        escaped = str(drill["description"]).replace("\n", "\\n")
+        escaped = str(drill["description"]).replace("\\", "\\\\").replace("\n", "\\n")
         lines.append(f'description: "{escaped}"')
-
-    ts = drill.get("training_settings") or {}
-    position = ts.get("position")
-    if isinstance(position, str) and position in POSITION_PRESETS:
-        lines.append(f"position: {_to_kebab(position)}")
-    elif isinstance(position, dict) and "p1_x" in position and "p2_x" in position:
-
-        lines.append(f"position: {position['p1_x']}, {position['p2_x']}")
-    block_setting = ts.get("block_setting")
-    if block_setting:
-        lines.append(f"block: {_to_kebab(block_setting)}")
+    position = _render_position(ts.get("position"))
+    if position:
+        lines.append(position)
+    if ts.get("block_setting"):
+        lines.append(f"block: {_to_kebab(ts['block_setting'])}")
     if dummy_char:
         lines.append(f"dummy: {_to_kebab(dummy_char)}")
     if drill.get("character_id"):
         lines.append(f"character: {_to_kebab(drill['character_id'])}")
+    return lines
+
+def _render_pacing(drill, ts):
+
+    lines = []
     if drill.get("reps") is not None:
         lines.append(f"reps: {drill['reps']}")
-    if attempts.normalize(drill.get(attempts.FIELD)) != attempts.DEFAULT:
-        lines.append(f"{attempts.FIELD}: {attempts.normalize(drill.get(attempts.FIELD))}")
+    attempt_source = attempts.normalize(drill.get(attempts.FIELD))
+    if attempt_source != attempts.DEFAULT:
+        lines.append(f"{attempts.FIELD}: {attempt_source}")
     if drill.get("game_speed") is not None:
         lines.append(f"game-speed: {drill['game_speed']}")
     if drill.get("response_window_frames") is not None:
@@ -945,19 +1104,34 @@ def render(drill: dict, dummy_char: str = None, data_dir: Path = None) -> str:
         lines.append("trains-for: " + ", ".join(drill["trains_for"]))
     if ts.get("counter"):
         lines.append(f"counter: {ts['counter']}")
-    for gauge in _gauges.PAIR_KEYS:
-        if ts.get(gauge):
-            lines.append(f"{_to_kebab(gauge)}: "
-                         f"{_gauges.render_pair(gauge, ts[gauge])}")
+    return lines
+
+def _render_settings(drill, ts):
+
+    lines = [f"{_to_kebab(gauge)}: {_gauges.render_pair(gauge, ts[gauge])}"
+             for gauge in _gauges.PAIR_KEYS if ts.get(gauge)]
     if ts.get("cpu_level") is not None:
         lines.append(f"cpu-level: {ts['cpu_level']}")
     if drill.get("difficulty"):
         lines.append(f"difficulty: {drill['difficulty']}")
+    belt_text = belts.render_belt_drill(drill.get(belts.FIELD))
+    if belt_text:
+        lines.append(f"belt-drill: {belt_text}")
     if ts.get("require_slot") is not None:
         lines.append("require-slot: " + ("yes" if ts["require_slot"] else "no"))
+    return lines
 
-    slot_outcomes = drill.get("slot_outcomes") or {}
+def _render_outcome(outcome):
 
+    lines = []
+    if outcome and outcome.get("expected_combo"):
+        lines.append(f"combo: {outcome['expected_combo']}")
+    if outcome and outcome.get("expected_response"):
+        lines.append(f"success: {_render_categories(outcome['expected_response'])}")
+    return lines
+
+def _render_reversal_slots(ts, slot_outcomes, dummy_char, data_dir):
+    lines = []
     for slot_key, wong_key in (
         ("reversal_slots", "wake-up-rev-slot"),
         ("block_reversal_slots", "block-rev-slot"),
@@ -970,34 +1144,31 @@ def render(drill: dict, dummy_char: str = None, data_dir: Path = None) -> str:
             skill_name = _name_for_skill_index(data_dir, dummy_char, rtype, cfg.get("skill_index"))
             skill_token = skill_name or str(cfg.get("skill_index"))
             lines.append(f"action: type={_to_kebab(rtype)} skill={skill_token}, {cfg.get('delay', 0)}f")
-            outcome = slot_outcomes.get(str(cfg["index"]))
-            if outcome and outcome.get("expected_combo"):
-                lines.append(f"combo: {outcome['expected_combo']}")
-            if outcome and outcome.get("expected_response"):
-                lines.append(f"success: {_render_categories(outcome['expected_response'])}")
+            lines.extend(_render_outcome(slot_outcomes.get(str(cfg["index"]))))
+    return lines
 
-    for entry in ts.get("recording_slots") or []:
+def _render_recording_slot(entry, slot_outcomes):
 
-        idx = entry["index"] if isinstance(entry, dict) else entry
-        weight = entry.get("weight") if isinstance(entry, dict) else None
-        pattern = entry.get("pattern") if isinstance(entry, dict) else None
+    if isinstance(entry, dict):
+        idx, weight, pattern = entry["index"], entry.get("weight"), entry.get("pattern")
 
-        authored = entry.get("action_text") if isinstance(entry, dict) else None
-        lines.append("")
-        lines.append(f"rec-slot: {idx}")
-        if authored:
-            lines.append(f"action: {authored}")
-        elif pattern:
-            lines.append(f"action: {_render_pattern_notation(pattern)}")
+        authored = entry.get("action_text")
+    else:
+        idx, weight, pattern, authored = entry, None, None, None
+    lines = ["", f"rec-slot: {idx}"]
+    if authored:
+        lines.append(f"action: {authored}")
+    elif pattern:
+        lines.append(f"action: {_render_pattern_notation(pattern)}")
 
-        if weight is not None:
-            lines.append(f"weight: {weight}")
-        outcome = slot_outcomes.get(str(idx))
-        if outcome and outcome.get("expected_combo"):
-            lines.append(f"combo: {outcome['expected_combo']}")
-        if outcome and outcome.get("expected_response"):
-            lines.append(f"success: {_render_categories(outcome['expected_response'])}")
+    if weight is not None:
+        lines.append(f"weight: {weight}")
+    lines.extend(_render_outcome(slot_outcomes.get(str(idx))))
+    return lines
 
+def _render_drill_criteria(drill):
+
+    lines = []
     if drill.get("fixed_expected_combo"):
         lines.append("")
         lines.append(f"fixed-combo: {drill['fixed_expected_combo']}")
@@ -1006,11 +1177,24 @@ def render(drill: dict, dummy_char: str = None, data_dir: Path = None) -> str:
         lines.append(f"fixed-success: {_render_categories(drill['fixed_expected_response'])}")
     if drill.get("survive_seconds"):
         lines.append(f"survive: {drill['survive_seconds']}")
-    if drill.get("against_criteria"):
-        lines.append("against: " + ", ".join(
-            _to_kebab(a) for a in drill["against_criteria"]))
-    if drill.get("expected_setup"):
-        lines.append("setup: " + ", ".join(
-            _to_kebab(a) for a in drill["expected_setup"]))
+    for field, key in (("against_criteria", "against"), ("expected_setup", "setup")):
+        if drill.get(field):
+            lines.append(f"{key}: " + ", ".join(_to_kebab(a) for a in drill[field]))
+    return lines
 
+def render(drill: dict, dummy_char: str = None, data_dir: Path = None) -> str:
+
+    if drill.get("wongscript_text"):
+        return _sync_cached_text(drill)
+    dummy_char = dummy_char or drill.get("dummy_character_id")
+    ts = drill.get("training_settings") or {}
+    slot_outcomes = drill.get("slot_outcomes") or {}
+
+    lines = _render_header(drill, ts, dummy_char)
+    lines += _render_pacing(drill, ts)
+    lines += _render_settings(drill, ts)
+    lines += _render_reversal_slots(ts, slot_outcomes, dummy_char, data_dir)
+    for entry in ts.get("recording_slots") or []:
+        lines += _render_recording_slot(entry, slot_outcomes)
+    lines += _render_drill_criteria(drill)
     return "\n".join(lines) + "\n"

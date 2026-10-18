@@ -43,7 +43,7 @@ def parse_pair(key: str, text: str):
                       f"got {len(parts)}"]
 
     out, errors = {}, []
-    for part, side in zip(parts, ("mine", "theirs")):
+    for part, side in zip(parts, ("mine", "theirs"), strict=False):
         if part == "":
             continue
         if key in _WORD_KEYS:

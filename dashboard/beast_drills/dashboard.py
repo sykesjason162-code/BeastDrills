@@ -1,14 +1,15 @@
 """The dashboard's Flask app -- a SEPARATE process from
 beast_drills.service (run alongside it, not a thread inside its polling
 loop). Only ever reads shared_database.json and the runtime/ files
-directly (safe, read-only,
-same principle as session.lua's own list_drills()/get_drill()) and only
+directly (safe, read-only, as the plugin reads it too) and only
 ever WRITES via outbox_writer.write_outbox_event -- never database.save()
 -- because beast_drills.service is the sole writer of shared_database.json
 (see CLAUDE.md's incident log: every past attempt to write it from
 anywhere else raced against that ownership and lost/corrupted data).
 
-Run with: python -m beast_drills.dashboard --data-dir <path> --port 8765
+Run with: python -m beast_drills.dashboard
+The address and data folder come from beast_drills.ini; --port and
+--data-dir override it for one run only, the same rule as the launcher.
 Needs the optional "dashboard" extra installed: pip install -e ".[dashboard]"
 See docs/SERVICE.md and docs/DEVELOPMENT.md.
 """
@@ -16,6 +17,7 @@ See docs/SERVICE.md and docs/DEVELOPMENT.md.
 import argparse
 import json
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -26,8 +28,8 @@ from . import (attempts, criteria, dashboard_data, database, deck, drill_search,
                outbox_writer, response_check, reviews_db, scheduler, wongscript)
 
 from .live_status import player_character
-from . import ids, paths, settings
-from .service import DEFAULT_DATA_DIR
+from . import belts, drill_fields, ids, paths, settings
+from .service import DEFAULT_INSTALL_DIR
 
 log = logging.getLogger("beast_drills.dashboard")
 
@@ -65,12 +67,30 @@ def _drill_fields(parsed: dict) -> dict:
 
     if attempts.normalize(parsed.get(attempts.FIELD)) != attempts.DEFAULT:
         fields[attempts.FIELD] = attempts.normalize(parsed.get(attempts.FIELD))
+
+    fields[belts.FIELD] = parsed.get(belts.FIELD)
     return fields
 
+_db_cache: dict = {}
+_db_cache_lock = threading.Lock()
+
 def _load_db_or_none(db_path: Path):
+    try:
+        st = Path(db_path).stat()
+        key = (st.st_mtime_ns, st.st_size)
+    except OSError:
+        key = None
+    with _db_cache_lock:
+        hit = _db_cache.get(str(db_path))
+        if key is not None and hit and hit[0] == key:
+            return hit[1]
     data, err = database.load(db_path)
     if data is None:
         log.warning("could not load database at %s: %s", db_path, err)
+        return None
+    if key is not None:
+        with _db_cache_lock:
+            _db_cache[str(db_path)] = (key, data)
     return data
 
 def _read_json_or_none(path: Path):
@@ -79,7 +99,7 @@ def _read_json_or_none(path: Path):
     if not path.exists():
         return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError):
         return None
@@ -89,6 +109,15 @@ def create_app(data_dir) -> Flask:
     outbox_dir = data_dir / "outbox"
     db_path = paths.database(data_dir)
     stats_db_path = paths.stats_db(data_dir)
+
+    def _no_database():
+
+        if db_path.exists():
+            _data, err = database.load(db_path)
+            if _data is None:
+                return jsonify({"error": "database_unreadable: " + database.unreadable_message(
+                    db_path, paths.backups_dir(data_dir), err)}), 503
+        return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
     live_status_path = paths.live_status(data_dir)
     last_rep_result_path = paths.last_rep_result(data_dir)
     last_session_result_path = paths.last_session_result(data_dir)
@@ -160,12 +189,16 @@ def create_app(data_dir) -> Flask:
 
     LIST_OMITS = ("wongscript_text",)
 
+    def _with_belt(drill):
+        tag = belts.tag(drill)
+        return {**drill, "_belt": tag} if tag else drill
+
     @app.get("/api/drills/facets")
     def drill_facets():
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
 
         drills = db.get("drills") or []
         types = set()
@@ -179,6 +212,9 @@ def create_app(data_dir) -> Flask:
 
             "characters_unset": any(not d.get("character_id") for d in drills),
             "dummies_unset": any(not d.get("dummy_character_id") for d in drills),
+
+            "belts": sorted({t["belt"] for t in (belts.tag(d) for d in drills) if t},
+                            key=lambda b: belts.BELT_INDEX[b]),
         })
 
     @app.get("/api/drills")
@@ -186,10 +222,11 @@ def create_app(data_dir) -> Flask:
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
 
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        all_drills = db.get("drills") or []
+
+        all_drills = [_with_belt(d) for d in (db.get("drills") or [])]
 
         query = (request.args.get("q") or "").strip()
         matched = drill_search.search(all_drills, query, now=now_iso) if query else all_drills
@@ -211,10 +248,15 @@ def create_app(data_dir) -> Flask:
             reviews_by_drill.setdefault(row["drill_id"], []).append(row)
 
         full = request.args.get("fields") == "full"
+
+        locked = not paths.is_dev_install()
         drills = []
         for drill in page:
             entry = {k: v for k, v in drill.items()
-                     if full or k not in LIST_OMITS}
+                     if (full or k not in LIST_OMITS) and k != "_belt"}
+            entry["official"] = bool(drill.get("_belt"))
+            entry["locked"] = locked and entry["official"]
+            entry["belt"] = drill.get("_belt")
             entry["bucket"] = dashboard_data.bucket_drill(drill, played_as)
             entry["is_due"] = drill.get("id") in due_ids
             history = dashboard_data.reviews_to_history_rows(reviews_by_drill.get(drill.get("id"), []))
@@ -231,7 +273,7 @@ def create_app(data_dir) -> Flask:
     def get_drill(drill_id):
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
 
         for drill in db.get("drills") or []:
             if drill.get("id") == drill_id:
@@ -248,7 +290,7 @@ def create_app(data_dir) -> Flask:
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         for drill in db.get("drills") or []:
             if drill.get("id") == drill_id:
                 dummy_char = request.args.get("dummy") or None
@@ -291,7 +333,8 @@ def create_app(data_dir) -> Flask:
         drill, errors = wongscript.parse(text, data_dir=data_dir)
         if errors:
             return jsonify({"drill": None, "errors": errors}), 200
-        return jsonify({"drill": drill, "errors": []})
+
+        return jsonify({"drill": drill, "errors": [], "belt": belts.tag(drill)})
 
     @app.post("/api/wongscript/render")
     def render_wongscript():
@@ -313,7 +356,7 @@ def create_app(data_dir) -> Flask:
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         dummy = request.args.get("dummy") or None
         drills = db.get("drills") or []
         dummy_chars = {}
@@ -370,10 +413,8 @@ def create_app(data_dir) -> Flask:
             drill = dict(_drill_fields(parsed), **{
                 "id": final_id,
                 "source": "Imported via WongScript bundle",
-                "interval_days": 1,
-                "ease_factor": 2.5,
-                "streak": 0,
-                "total_sessions": 0,
+
+                **scheduler.STARTING_STATE,
                 "next_review": now_iso,
             })
             outbox_writer.write_outbox_event(outbox_dir, {"event": "create_drill_request", "drill": drill})
@@ -423,27 +464,12 @@ def create_app(data_dir) -> Flask:
             return jsonify({"error": "invalid_id: letters, digits, _ . - only"}), 400
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         drill = {
+
+            **drill_fields.from_body(body),
             "id": drill_id,
             "name": name,
             "description": body.get("description") or "",
             "training_settings": body.get("training_settings") or {},
-            "slot_outcomes": body.get("slot_outcomes"),
-            "fixed_expected_response": body.get("fixed_expected_response"),
-            "expected_setup": body.get("expected_setup"),
-            "against_criteria": body.get("against_criteria"),
-            "survive_seconds": body.get("survive_seconds"),
-            "fixed_expected_combo": body.get("fixed_expected_combo"),
-            "response_window_frames": body.get("response_window_frames"),
-            "game_speed": body.get("game_speed"),
-            "reps": body.get("reps"),
-            "attempts": body.get("attempts"),
-            "character_id": body.get("character_id"),
-            "dummy_character_id": body.get("dummy_character_id"),
-            "trains": body.get("trains"),
-            "trains_for": body.get("trains_for"),
-            "difficulty": body.get("difficulty"),
-
-            "wongscript_text": body.get("wongscript_text"),
 
             "source": "Created from the dashboard",
             **scheduler.STARTING_STATE,
@@ -462,33 +488,22 @@ def create_app(data_dir) -> Flask:
             "trains_for": wongscript.TRAINS_FOR_CATEGORIES,
         })
 
+    def _official(drill_id):
+
+        if paths.is_dev_install():
+            return False
+        db = _load_db_or_none(db_path) or {}
+        drill = next((d for d in db.get("drills") or [] if d.get("id") == drill_id), None)
+        return bool(drill) and belts.is_belt_drill(drill)
+
     @app.patch("/api/drills/<drill_id>")
     def update_drill(drill_id):
+
+        if _official(drill_id):
+            return jsonify({"error": "belt_drill_read_only"}), 409
         body = request.get_json(force=True, silent=True) or {}
-        patch = {
-            "name": body.get("name"),
-            "description": body.get("description"),
-            "training_settings": body.get("training_settings"),
-            "slot_outcomes": body.get("slot_outcomes"),
-            "fixed_expected_response": body.get("fixed_expected_response"),
 
-            "expected_setup": body.get("expected_setup"),
-            "against_criteria": body.get("against_criteria"),
-            "survive_seconds": body.get("survive_seconds"),
-
-            **({"fixed_expected_combo": body["fixed_expected_combo"]}
-               if "fixed_expected_combo" in body else {}),
-            "response_window_frames": body.get("response_window_frames"),
-            "game_speed": body.get("game_speed"),
-            "reps": body.get("reps"),
-            "attempts": body.get("attempts"),
-            "character_id": body.get("character_id"),
-            "dummy_character_id": body.get("dummy_character_id"),
-            "trains": body.get("trains"),
-            "trains_for": body.get("trains_for"),
-            "difficulty": body.get("difficulty"),
-            "wongscript_text": body.get("wongscript_text"),
-        }
+        patch = drill_fields.from_body(body)
         outbox_writer.write_outbox_event(
             outbox_dir, {"event": "update_drill_request", "drill_id": drill_id, "patch": patch}
         )
@@ -505,6 +520,8 @@ def create_app(data_dir) -> Flask:
 
     @app.delete("/api/drills/<drill_id>")
     def delete_drill(drill_id):
+        if _official(drill_id):
+            return jsonify({"error": "belt_drill_read_only"}), 409
         outbox_writer.write_outbox_event(outbox_dir, {"event": "delete_drill_request", "drill_id": drill_id})
         return jsonify({"queued": True}), 202
 
@@ -571,7 +588,7 @@ def create_app(data_dir) -> Flask:
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         drills = db.get("drills") or []
 
         return jsonify({"summary": duplicates.summarise(drills),
@@ -598,14 +615,14 @@ def create_app(data_dir) -> Flask:
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         return jsonify(dashboard_data.compute_hit_zones(db, "hit_zones_dealt"))
 
     @app.get("/api/stats/overview")
     def stats_overview():
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         return jsonify(dashboard_data.compute_overview(db, now_iso, _character_arg()))
 
@@ -620,6 +637,18 @@ def create_app(data_dir) -> Flask:
 
         return jsonify({"matches": matches.view(rows),
                         "overall": matches.overall(reviews_db.match_totals(stats_db_path))})
+
+    @app.get("/api/profile/belt")
+    def profile_belt():
+
+        character = (request.args.get("character") or "").strip()
+        if not character:
+            return jsonify({"error": "character_required"}), 400
+        db = _load_db_or_none(db_path)
+        if db is None:
+            return _no_database()
+        reviews = reviews_db.all_reviews(stats_db_path, character)
+        return jsonify(belts.belt_for(db.get("drills") or [], reviews, character))
 
     @app.get("/api/matches/roster")
     def matches_roster():
@@ -641,7 +670,7 @@ def create_app(data_dir) -> Flask:
 
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         payload = dashboard_data.build_profile_export(
             db,
             time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -667,7 +696,7 @@ def create_app(data_dir) -> Flask:
     def stats_hit_zones():
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         return jsonify(dashboard_data.compute_hit_zones(db))
 
     @app.get("/api/stats/reviews")
@@ -679,7 +708,7 @@ def create_app(data_dir) -> Flask:
     def stats_forecast():
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         return jsonify(dashboard_data.compute_forecast(
             dashboard_data.drills_for_character(db.get("drills") or [], _character_arg()), now_iso))
@@ -704,7 +733,7 @@ def create_app(data_dir) -> Flask:
     def stats_added():
         db = _load_db_or_none(db_path)
         if db is None:
-            return jsonify({"error": "database_not_found: start beast_drills.service first"}), 503
+            return _no_database()
         return jsonify(dashboard_data.compute_added(
             dashboard_data.drills_for_character(db.get("drills") or [], _character_arg())))
 
@@ -712,8 +741,8 @@ def create_app(data_dir) -> Flask:
 
 def main() -> None:
 
-    cfg = settings.load(DEFAULT_DATA_DIR)
-    _install_dir, data_default = settings.resolve_roots(DEFAULT_DATA_DIR)
+    cfg = settings.load(DEFAULT_INSTALL_DIR)
+    _install_dir, data_default = settings.resolve_roots(DEFAULT_INSTALL_DIR)
 
     parser = argparse.ArgumentParser(description=__doc__)
 

@@ -54,21 +54,33 @@ def _load_connected(character_id: str, data_dir: Path) -> dict:
     if key in _cache:
         return _cache[key]
 
-    path = paths.reference_dir(data_dir, _CONNECTED_DIR_NAME) / f"{character_id}.json"
     table: dict = {}
-    try:
-        with open(path, encoding="utf-8") as f:
-            for notation, frames in (json.load(f) or {}).items():
-                if not isinstance(frames, int) or frames <= 0:
-                    continue
+    _read_connected(
+        paths.reference_dir(data_dir, _CONNECTED_DIR_NAME) / f"{character_id}.json", table)
 
-                canonical = _normalize(notation)
-                if frames > table.get(canonical, 0):
-                    table[canonical] = frames
-    except (OSError, ValueError, AttributeError):
-        table = {}
+    _read_connected(paths.observed_timings(data_dir, character_id), table)
     _cache[key] = table
     return table
+
+def _read_connected(path: Path, table: dict) -> None:
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            rows = (json.load(f) or {}).items()
+    except (OSError, ValueError, AttributeError):
+        return
+    for notation, frames in rows:
+        if not isinstance(frames, int) or frames <= 0:
+            continue
+
+        canonical = _normalize(notation)
+        if frames > table.get(canonical, 0):
+            table[canonical] = frames
+
+def forget(character_id: str) -> None:
+
+    for key in [k for k in _cache if k[0] == "connected" and k[1] == character_id]:
+        del _cache[key]
 
 def _load_official(character_id: str, data_dir: Path) -> dict:
 
