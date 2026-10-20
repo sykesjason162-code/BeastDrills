@@ -1,0 +1,4 @@
+# The public BeastDrills repo's Sponsor button. tools/release.py copies this
+# folder to .github/ there on every release; it does not ship in the zip.
+buy_me_a_coffee: chipflip
+custom: ["https://www.paypal.com/donate/?hosted_button_id=GQH87AZWTZQJS"]

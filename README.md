@@ -451,3 +451,10 @@ Beast Drills is free. It is not affiliated with or endorsed by Capcom.
 The combo drills and the frame data come from the
 [SuperCombo wiki](https://wiki.supercombo.gg/w/Street_Fighter_6) and its
 contributors. Each combo drill names it in its description.
+
+## Supporting it
+
+Beast Drills is free and always will be. If it has helped your game and you
+want to say thanks, you can
+[donate through PayPal](https://www.paypal.com/donate/?hosted_button_id=GQH87AZWTZQJS)
+or [buy me a coffee](https://buymeacoffee.com/chipflip). It is never expected, and nothing in the mod is locked behind it.
