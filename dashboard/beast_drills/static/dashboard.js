@@ -11,7 +11,8 @@ let statsCharacter = localStorage.getItem(STATS_CHARACTER_KEY) || "all";
 const STATS_DUMMY_KEY = "bd.stats.dummy";
 let statsDummy = localStorage.getItem(STATS_DUMMY_KEY) || "all";
 
-const t = (s) => (window.i18n ? window.i18n.T(s) : s);
+const t = (s, vars) => (window.i18n ? window.i18n.T(s, vars)
+  : String(s).replace(/\{(\w+)\}/g, (w, k) => (vars && k in vars ? String(vars[k]) : w)));
 
 const statsUrl = (path) => {
   const q = new URLSearchParams();
@@ -591,9 +592,10 @@ async function refreshLive() {
   const tally = s.criteria_tally || {};
   const bySide = s.criteria_tally_side || { left: {}, right: {} };
 
+  const practice = s.session_practice === true;
   bodyEl.innerHTML = `
-    <div class="live-stat"><div class="label">${t("Session")}</div><div class="value">${s.session_status ?? "-"}</div></div>
-    <div class="live-stat"><div class="label">${t("Attempt")}</div><div class="value">${s.session_attempt_count ?? 0}/${s.session_attempts_target ?? "?"}</div></div>
+    <div class="live-stat"><div class="label">${t("Session")}</div><div class="value">${practice ? t("Practice") : (s.session_status ?? "-")}</div></div>
+    <div class="live-stat"><div class="label">${t("Attempt")}</div><div class="value">${s.session_attempt_count ?? 0}${practice ? "" : "/" + (s.session_attempts_target ?? "?")}</div></div>
     <div class="live-stat"><div class="label">${t("Successes")}</div><div class="value">${s.session_success_count ?? 0}</div></div>
     ${renderTallyPairs(tally, bySide)}
   `;
@@ -911,10 +913,10 @@ function renderSideFigure(el, label, stats, characterId) {
     ${hasSprite ? spriteFigure(characterId, label, fill) : genericFigure(label, fill)}
     <div class="hz-side-rows">
       ${["high", "mid", "low"].map((z) => `
-        <div class="hz-side-row"><span>${z.toUpperCase()}</span>
+        <div class="hz-side-row"><span>${t({ high: "HIGH", mid: "MID", low: "LOW" }[z])}</span>
           <span><b>${pct[z] || 0}%</b> (${counts[z] || 0})</span></div>`).join("")}
     </div>
-    <div class="hz-side-total">${total ? `<b>${total}</b> hits` : "no hits yet"}</div>`;
+    <div class="hz-side-total">${total ? `<b>${total}</b> ${t("hits")}` : t("no hits yet")}</div>`;
 }
 
 function sideStatsFor(entry, side) {
@@ -1224,7 +1226,7 @@ function donutHTML(d) {
   }
   const pct = Math.round((d.total_successes / d.total_attempts) * 100);
   return `
-    <div class="donut" style="background:conic-gradient(var(--done) 0% ${pct}%, var(--danger) ${pct}% 100%)" title="${d.total_successes}/${d.total_attempts} lifetime successes">
+    <div class="donut" style="background:conic-gradient(var(--done) 0% ${pct}%, var(--danger) ${pct}% 100%)" title="${escapeHTML(t("{hit}/{n} lifetime successes", { hit: d.total_successes, n: d.total_attempts }))}">
       <div class="donut-hole">${pct}%</div>
     </div>
   `;
@@ -1232,15 +1234,15 @@ function donutHTML(d) {
 
 function gradeLineHTML(d) {
   if (d.average_grade === null || d.average_grade === undefined) {
-    return `<div class="grade-line dim">Not attempted yet</div>`;
+    return `<div class="grade-line dim">${t("Not attempted yet")}</div>`;
   }
   const lastPill = d.last_grade
-    ? `<span class="grade-pill ${GRADE_CLASS[d.last_grade] || ""}">${d.last_grade_label}</span>`
+    ? `<span class="grade-pill ${GRADE_CLASS[d.last_grade] || ""}">${t(d.last_grade_label)}</span>`
     : "";
   return `
     <div class="grade-line">
-      <span>Avg <b>${d.average_grade}</b></span>
-      <span>Last ${lastPill}</span>
+      <span>${t("Avg")} <b>${d.average_grade}</b></span>
+      <span>${t("Last")} ${lastPill}</span>
     </div>
   `;
 }
@@ -1274,7 +1276,8 @@ function perCharacterHTML(d) {
   const chip = (r, hidden) => {
     const name = escapeHTML(characterLabel(r.id));
     return `<span class="pc-chip${r.due ? " is-due" : ""}${hidden ? " pc-extra" : ""}"
-      title="${name}: ${r.sessions} session${r.sessions === 1 ? "" : "s"}, streak ${r.streak}${r.due ? " -- due now" : ""}"
+      title="${escapeHTML(t(r.sessions === 1 ? "{name}: {n} session, streak {streak}" : "{name}: {n} sessions, streak {streak}",
+        { name, n: r.sessions, streak: r.streak }) + (r.due ? t(" -- due now") : ""))}"
       >${name} ${r.sessions}</span>`;
   };
 
@@ -1282,16 +1285,35 @@ function perCharacterHTML(d) {
 
   const more = rows.length > PC_CHIPS_SHOWN
     ? `<button class="pc-more" onclick="togglePerCharacter(this)"
-         title="Show every character who has practised this">+${rows.length - PC_CHIPS_SHOWN} more</button>`
+         title="${escapeHTML(t("Show every character who has practised this"))}">${t("+{n} more", { n: rows.length - PC_CHIPS_SHOWN })}</button>`
     : "";
-  return `<div class="per-character is-clamped" title="Practised per character">${chips}${more}</div>`;
+  return `<div class="per-character is-clamped" title="${escapeHTML(t("Practised per character"))}">${chips}${more}</div>`;
+}
+
+function perDummyHTML(d) {
+  const counts = d.dummy_sessions || {};
+  const rows = Object.entries(counts)
+    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
+  if (!rows.length) return "";
+  const chips = rows.map(([id, n], i) => {
+    const name = escapeHTML(characterLabel(id));
+    return `<span class="pc-chip pc-vs${i >= PC_CHIPS_SHOWN ? " pc-extra" : ""}"
+      title="${escapeHTML(t(n === 1 ? "Practised against {name}: {n} session, whoever you played"
+                                 : "Practised against {name}: {n} sessions, whoever you played", { name, n }))}"
+      >${t("vs {name}", { name })} ${n}</span>`;
+  }).join("");
+  const more = rows.length > PC_CHIPS_SHOWN
+    ? `<button class="pc-more" onclick="togglePerCharacter(this)"
+         title="${escapeHTML(t("Show every opponent this has been practised against"))}">${t("+{n} more", { n: rows.length - PC_CHIPS_SHOWN })}</button>`
+    : "";
+  return `<div class="per-character is-clamped" title="${escapeHTML(t("Practised against each opponent"))}">${chips}${more}</div>`;
 }
 
 function togglePerCharacter(btn) {
   const row = btn.parentElement;
   const clamped = row.classList.toggle("is-clamped");
   const hidden = row.querySelectorAll(".pc-extra").length;
-  btn.textContent = clamped ? `+${hidden} more` : "Less";
+  btn.textContent = clamped ? t("+{n} more", { n: hidden }) : t("Less");
 }
 
 const DIFFICULTY_LABELS = {
@@ -1304,7 +1326,7 @@ function difficultyTagHTML(difficulty) {
   const key = String(difficulty).toLowerCase();
   const label = DIFFICULTY_LABELS[key];
   if (!label) return "";
-  return `<span class="tag diff-${key}" title="Difficulty">${label}</span>`;
+  return `<span class="tag diff-${key}" title="${escapeHTML(t("Difficulty"))}">${t(label)}</span>`;
 }
 
 function isOrderedCriteria(v) {
@@ -1374,13 +1396,13 @@ function cardHTML(d) {
   return `
     <div class="${cardClass}${selectedClass}${favClass}"${artStyle}>
       <div class="top">
-        <label class="card-select" title="Send this drill to the game">
+        <label class="card-select" title="${escapeHTML(t("Send this drill to the game"))}">
           <input type="checkbox" class="card-select-checkbox" id="select-${escapeHTML(d.id)}"${d.selected ? " checked" : ""}>
         </label>
         ${beltChipHTML(d)}
         <button class="card-fav${d.favorite ? " on" : ""}" id="fav-${escapeHTML(d.id)}"
                 aria-pressed="${d.favorite ? "true" : "false"}"
-                title="${d.favorite ? "In your favorites" : "Add to favorites"}">${d.favorite ? "&#9733;" : "&#9734;"}</button>
+                title="${d.favorite ? t("In your favorites") : t("Add to favorites")}">${d.favorite ? "&#9733;" : "&#9734;"}</button>
       </div>
       <!-- Reserves the band the character's face occupies, so the title
            starts below it (2026-08-18, Jason: "Align the image to the top
@@ -1392,22 +1414,23 @@ function cardHTML(d) {
       <p>${linkify(d.description || "")}</p>
       ${gradeLineHTML(d)}
       ${perCharacterHTML(d)}
+      ${perDummyHTML(d)}
       <div class="card-actions">
         ${d.locked
           // Official drills are what a belt is measured on, so a release
           // locks them (belts.py); a copy is the player's to change, and
           // counts toward no belt. A dev install edits them as normal.
-          ? `<button class="btn" id="edit-${escapeHTML(d.id)}" title="Official drills cannot be changed. Make your own copy to edit.">View</button>`
-          : `<button class="btn" id="edit-${escapeHTML(d.id)}">Edit</button>`}
-        <button class="btn" id="history-${escapeHTML(d.id)}">History</button>
+          ? `<button class="btn" id="edit-${escapeHTML(d.id)}" title="${escapeHTML(t("Official drills cannot be changed. Make your own copy to edit."))}">${t("View")}</button>`
+          : `<button class="btn" id="edit-${escapeHTML(d.id)}">${t("Edit")}</button>`}
+        <button class="btn" id="history-${escapeHTML(d.id)}">${t("History")}</button>
         ${d.locked
-          ? `<button class="btn" id="dup-${escapeHTML(d.id)}" title="Make your own copy to change. A copy counts toward no belt.">Duplicate</button>`
-          : `<button class="btn" id="delete-${escapeHTML(d.id)}">Delete</button>`}
+          ? `<button class="btn" id="dup-${escapeHTML(d.id)}" title="${escapeHTML(t("Make your own copy to change. A copy counts toward no belt."))}">${t("Duplicate")}</button>`
+          : `<button class="btn" id="delete-${escapeHTML(d.id)}">${t("Delete")}</button>`}
       </div>
       <div class="card-meta">
         <div class="top-tags">
-          <span class="tag ${d.bucket}">${bucketLabel(d.bucket)}</span>
-          ${d.is_due ? '<span class="tag due">DUE</span>' : ""}
+          <span class="tag ${d.bucket}">${t(bucketLabel(d.bucket))}</span>
+          ${d.is_due ? `<span class="tag due">${t("DUE")}</span>` : ""}
           ${difficultyTagHTML(d.difficulty)}
         </div>
         ${donutHTML(d)}
@@ -1504,6 +1527,27 @@ function applyGaugesFromForm(trainingSettings) {
   const cpuRaw = (document.getElementById("f-cpu-level")?.value || "").trim();
   if (cpuRaw === "") delete trainingSettings.cpu_level;
   else trainingSettings.cpu_level = Number(cpuRaw);
+
+  const dummy = document.getElementById("f-dummy-controls");
+  if (dummy) {
+    if (dummy.value === "") delete trainingSettings.dummy_action;
+    else trainingSettings.dummy_action = dummy.value;
+  }
+}
+
+const DUMMY_CONTROLS = [["", "Dummy (default)"], ["human", "Player 2"], ["cpu", "CPU"]];
+
+function fillDummyControls(ts) {
+  const el = document.getElementById("f-dummy-controls");
+  if (!el) return;
+  const current = (ts && ts.dummy_action) || "";
+  el.innerHTML = "";
+  for (const [value, label] of DUMMY_CONTROLS) el.appendChild(new Option(label, value));
+
+  if (current && !DUMMY_CONTROLS.some(([v]) => v === current)) {
+    el.appendChild(new Option(`${current} (as saved)`, current));
+  }
+  el.value = current;
 }
 
 function fillGaugesIntoForm(ts) {
@@ -1526,6 +1570,7 @@ function fillGaugesIntoForm(ts) {
   const cpu = document.getElementById("f-cpu-level");
 
   if (cpu) cpu.value = ts && ts.cpu_level !== undefined ? ts.cpu_level : "";
+  fillDummyControls(ts);
 }
 
 function renderTrainsChips() {

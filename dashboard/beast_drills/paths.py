@@ -86,6 +86,10 @@ def session_progress(data_dir) -> Path:
 def last_rep_result(data_dir) -> Path:
     return _p(data_dir, RUNTIME, "last_rep_result.json")
 
+def save_combo_result(data_dir) -> Path:
+
+    return _p(data_dir, RUNTIME, "save_combo_result.json")
+
 def last_session_result(data_dir) -> Path:
     return _p(data_dir, RUNTIME, "last_session_result.json")
 

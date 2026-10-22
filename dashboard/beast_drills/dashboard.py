@@ -163,9 +163,12 @@ def create_app(data_dir) -> Flask:
     def drills_page():
         return render_template("drills.html")
 
+    HELP_TRANSLATIONS = {"ja": "help_ja.html"}
+
     @app.get("/help")
     def help_page():
-        return render_template("help.html")
+        lang = (request.args.get("lang") or "").strip().lower()
+        return render_template(HELP_TRANSLATIONS.get(lang, "help.html"))
 
     @app.get("/stats")
     def stats_page():
@@ -259,8 +262,10 @@ def create_app(data_dir) -> Flask:
             entry["belt"] = drill.get("_belt")
             entry["bucket"] = dashboard_data.bucket_drill(drill, played_as)
             entry["is_due"] = drill.get("id") in due_ids
-            history = dashboard_data.reviews_to_history_rows(reviews_by_drill.get(drill.get("id"), []))
+            reviews = reviews_by_drill.get(drill.get("id"), [])
+            history = dashboard_data.reviews_to_history_rows(reviews)
             entry.update(dashboard_data.compute_grade_stats(history))
+            entry["dummy_sessions"] = dashboard_data.dummy_session_counts(reviews)
             drills.append(entry)
 
         if not query and not limit and not offset:

@@ -1,5 +1,7 @@
 const SECTION_SEL = "section.panel[id]";
 
+const T = (english, vars) => (window.i18n ? window.i18n.T(english, vars) : english);
+
 function slug(text) {
   return String(text || "")
     .toLowerCase()
@@ -7,11 +9,17 @@ function slug(text) {
     .replace(/^-+|-+$/g, "");
 }
 
+function headingTitle(h) {
+  const copy = h.cloneNode(true);
+  copy.querySelectorAll(".help-ver").forEach((el) => el.remove());
+  return copy.textContent.trim();
+}
+
 function makeHeadingsLinkable() {
   const used = new Set([...document.querySelectorAll("[id]")].map((el) => el.id));
   document.querySelectorAll(`${SECTION_SEL} h3`).forEach((h) => {
     if (!h.id) {
-      let id = slug(h.textContent);
+      let id = slug(headingTitle(h));
 
       let n = 2;
       const base = id;
@@ -21,18 +29,18 @@ function makeHeadingsLinkable() {
     used.add(h.id);
 
     h.classList.add("help-anchor");
-    h.title = "Copy a link to this section";
+    h.title = T("Copy a link to this section");
     h.addEventListener("click", () => {
       const url = `${location.origin}${location.pathname}#${h.id}`;
       history.replaceState(null, "", `#${h.id}`);
 
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(
-          () => flash(h, "Link copied"),
-          () => flash(h, "Link in the address bar")
+          () => flash(h, T("Link copied")),
+          () => flash(h, T("Link in the address bar"))
         );
       } else {
-        flash(h, "Link in the address bar");
+        flash(h, T("Link in the address bar"));
       }
     });
   });
@@ -53,7 +61,7 @@ function buildContents() {
   nav.classList.add("help-toc-tree");
   nav.innerHTML = `
     <div class="help-search">
-      <input type="search" id="help-search" placeholder="Search help" autocomplete="off">
+      <input type="search" id="help-search" placeholder="${T("Search help")}" autocomplete="off">
       <span class="dim" id="help-search-count"></span>
     </div>
     <div class="help-toc-list" id="help-toc-list"></div>`;
@@ -78,7 +86,7 @@ function buildContents() {
       subs.forEach((h) => {
         const a = document.createElement("a");
         a.href = `#${h.id}`;
-        a.textContent = h.textContent.trim();
+        a.textContent = headingTitle(h);
         ul.appendChild(a);
         links.push({ a, id: h.id });
       });
@@ -164,7 +172,9 @@ function wireSearch(links) {
       });
     });
     links.forEach(({ a, id }) => (a.hidden = !shown.has(id)));
-    count.textContent = hits ? `${hits} section${hits === 1 ? "" : "s"}` : "no matches";
+    count.textContent = hits
+      ? T(hits === 1 ? "{n} section" : "{n} sections", { n: hits })
+      : T("no matches");
   };
 
   input.addEventListener("input", apply);
@@ -182,12 +192,15 @@ function sliceUntilNextH3(h) {
   return text;
 }
 
-makeHeadingsLinkable();
-const links = buildContents();
-followScroll(links);
-wireSearch(links);
+(async () => {
+  if (window.i18n) await window.i18n.ready;
+  makeHeadingsLinkable();
+  const links = buildContents();
+  followScroll(links);
+  wireSearch(links);
 
-if (location.hash) {
-  const target = document.getElementById(location.hash.slice(1));
-  if (target) target.scrollIntoView();
-}
+  if (location.hash) {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target) target.scrollIntoView();
+  }
+})();

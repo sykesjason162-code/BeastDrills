@@ -35,6 +35,15 @@ def reviews_to_history_rows(reviews: list) -> list:
         for r in reviews
     ]
 
+def dummy_session_counts(reviews: list) -> dict:
+
+    counts: dict = {}
+    for r in reviews:
+        dummy = r.get("dummy_character_id")
+        if dummy:
+            counts[dummy] = counts.get(dummy, 0) + 1
+    return counts
+
 def compute_grade_stats(history: list) -> dict:
 
     if not history:

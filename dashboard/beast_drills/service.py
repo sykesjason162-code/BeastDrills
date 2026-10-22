@@ -47,6 +47,7 @@ from . import attempts, belts, gauges, ids, mods, paths, settings
 from . import (
     combo_check,
     combo_plan,
+    combo_save,
     criteria,
     session_breakdown,
     session_progress,
@@ -272,7 +273,10 @@ class Service:
         db = self._load_db()
         have_ids = {d.get("id") for d in db.get("drills") or []}
         gone = set(db.get("deleted_drill_ids") or [])
-        have_names = {duplicates.name_key(d) for d in db.get("drills") or []}
+
+        shipped_ids = {d.get("id") for d in example.get("drills") or []}
+        have_names = {duplicates.name_key(d) for d in db.get("drills") or []
+                      if d.get("id") not in shipped_ids}
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         added = []
         for shipped in example.get("drills") or []:
@@ -285,7 +289,6 @@ class Service:
             _fresh_schedule(drill, now)
             added.append(drill)
             have_ids.add(drill_id)
-            have_names.add(duplicates.name_key(shipped))
         if not added:
             return 0
 
@@ -423,6 +426,8 @@ class Service:
     def _record_rep(self, session_id: str, grade: int, event: dict,
                     against=None, setup=None, outcome=None) -> int:
 
+        if event.get("practice"):
+            return 0
         self._sessions_in_progress.setdefault(session_id, []).append(grade)
         self._session_range_points.setdefault(session_id, []).append(event.get("range_point"))
 
@@ -503,7 +508,7 @@ class Service:
             "graded rep for session=%s drill=%s -> %s (total this session: %d)",
             session_id, drill_id, grade, total,
         )
-        self._write_last_rep_result(session_id, drill_id, grade)
+        self._write_last_rep_result(session_id, drill_id, grade, event)
 
     def _grade_rep(self, event: dict, drill: dict, session_id: str, drill_id: str):
 
@@ -607,7 +612,7 @@ class Service:
             drill.get("expected_setup"), outcome="hit" if ok else "miss")
         log.info("graded rep for session=%s drill=%s -> %s (total this session: %d)",
                  session_id, drill_id, grade, total)
-        self._write_last_rep_result(session_id, drill_id, grade)
+        self._write_last_rep_result(session_id, drill_id, grade, event)
         return True, combo_mode
 
     @staticmethod
@@ -635,9 +640,16 @@ class Service:
             for e in landed
         ) or "(nothing)"
 
-    def _write_last_rep_result(self, session_id: str, drill_id: str, grade) -> None:
+    def _write_last_rep_result(self, session_id: str, drill_id: str, grade,
+                               event: dict | None = None) -> None:
 
         result_payload = {"session_id": session_id, "drill_id": drill_id, "grade": grade}
+
+        if event is not None:
+            if event.get("attempt") is not None:
+                result_payload["attempt"] = event["attempt"]
+            if event.get("practice"):
+                result_payload["practice"] = True
         tmp = paths.last_rep_result(self.data_dir).with_suffix(".json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(result_payload, f, indent=4)
@@ -1257,6 +1269,25 @@ class Service:
                  graded["wins"], graded["losses"], graded["won"], graded["score"],
                  len(graded["recommendations"]))
 
+    def _handle_save_combo(self, event: dict, db: dict) -> None:
+
+        drill, why = combo_save.drill_from_combo(
+            event.get("character_id"), event.get("move_ids"), event.get("hits"), self.data_dir)
+        if drill is None:
+            log.warning("save_combo_request not saved: %s", why)
+        else:
+            self._handle_create_drill({"drill": drill}, db)
+
+        result = {"request_id": event.get("request_id"), "ok": drill is not None,
+                  "name": drill["name"] if drill else None, "reason": why}
+        path = paths.save_combo_result(self.data_dir)
+        tmp = path.with_suffix(".json.tmp")
+        try:
+            tmp.write_text(json.dumps(result), encoding="utf-8")
+            paths.atomic_replace(tmp, path)
+        except OSError as exc:
+            log.warning("could not write the save-combo result (%s)", exc)
+
     def _handle_create_drill(self, event: dict, db: dict) -> None:
 
         drill = dict(event.get("drill") or {})
@@ -1410,6 +1441,8 @@ class Service:
                     self._handle_session_concluded(event, db)
                 elif kind == "create_drill_request":
                     self._handle_create_drill(event, db)
+                elif kind == "save_combo_request":
+                    self._handle_save_combo(event, db)
                 elif kind == "update_drill_request":
                     self._handle_update_drill(event, db)
                 elif kind == "delete_drill_request":

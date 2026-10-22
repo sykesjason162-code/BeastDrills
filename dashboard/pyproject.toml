@@ -2,7 +2,7 @@
 name = "beast-drills"
 # The public beta. PEP 440 spelling of 0.2.0-beta, the version the
 # release build stamps into modinfo.ini and the zip name.
-version = "0.2.0b0"
+version = "0.2.1b0"
 description = "Beast Drills' local service and dashboard: grading, scheduling and the web UI. Talks to the game only through files on disk (see docs/SERVICE.md)."
 requires-python = ">=3.10"
 

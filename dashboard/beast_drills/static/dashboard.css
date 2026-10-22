@@ -616,6 +616,13 @@ details.advanced textarea{margin-top:8px}
 .help-figure.is-zoomed img{cursor:zoom-out}
 .help-figure figcaption{font-size:11.5px; color:var(--dim); margin-top:8px; font-style:italic}
 
+.help-ver{
+  display:inline-block; margin-left:8px; padding:1px 6px; vertical-align:middle;
+  font-size:10.5px; font-weight:normal; letter-spacing:.3px; color:var(--dim);
+  border:1px solid var(--line); border-radius:3px; white-space:nowrap;
+}
+.help-ver.is-new{color:var(--gold); border-color:var(--gold)}
+
 .help-example{
   background:var(--inset); border:1px solid var(--line); border-left:3px solid var(--gold);
   padding:13px 15px; overflow-x:auto; font-size:12px; line-height:1.65; color:var(--txt);
@@ -1209,6 +1216,8 @@ input:focus, textarea:focus, select:focus{
   border-color: var(--accent, #e8b923);
   color: var(--accent, #e8b923);
 }
+
+.pc-chip.pc-vs { border-style: dashed; }
 
 .per-character.is-clamped .pc-extra { display: none; }
 .pc-more {

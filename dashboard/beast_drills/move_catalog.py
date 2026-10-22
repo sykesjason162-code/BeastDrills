@@ -190,6 +190,8 @@ def resolve(character_id: str, notation: str, data_dir=None):
         if not found:
             found = _any_of_three(table, branch)
         if not found:
+            found = _leaping_special(character_id, table, branch, data_dir)
+        if not found:
             return None
         ids |= found
     return ids
@@ -233,6 +235,19 @@ def _followup(character_id, table, branch, data_dir):
             continue
 
         if all(str(names.get(str(i)) or "").startswith("SPA") for i in ids):
+            return ids
+    return None
+
+def _leaping_special(character_id, table, branch, data_dir):
+
+    if data_dir is None:
+        return None
+    names = _action_names(character_id, data_dir)
+    if not names:
+        return None
+    for form in _candidates(branch):
+        ids = table.get("J." + form)
+        if ids and all(str(names.get(str(i)) or "").startswith("SPA") for i in ids):
             return ids
     return None
 

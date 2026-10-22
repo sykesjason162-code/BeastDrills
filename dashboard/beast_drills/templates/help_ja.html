@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast Drills ヘルプ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% with active='help' %}
+    {% include '_header.html' %}
+  {% endwith %}
+
+  {#
+    help.html の日本語版（2026-10-21）。英語版と同じ構成・同じ見出しID・同じ
+    バージョン表示を保つこと。test_help_translation.py が両者を照合する。
+    英語版の節を変えたら、ここも同じ節を直す。
+  #}
+
+  <div class="help-layout">
+  <nav class="help-toc">
+    <a href="#practising">練習</a>
+    <a href="#in-game">ゲーム内</a>
+    <a href="#pages">各ページ</a>
+    <a href="#wongscript">WongScript</a>
+    <a href="#dashboard-tools">ドリルの作成</a>
+  </nav>
+
+  <section class="panel panel-cyan" id="practising">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_cfn.png')">
+      <h2>練習</h2>
+    </div>
+    <div class="help-body">
+      <p>Beast Drills はストリートファイターのための間隔反復（スペースド・リピティション）練習ツールです。
+      ドリルはそれぞれ、保存されたトレーニングモードの設定と「何ができたら成功か」というルールの組み合わせです。
+      <em>予定の来た</em>ドリルを練習すると、アプリが実際に起きたことを見て判定し、
+      失敗が続くドリルほど早くまた出てきます。</p>
+
+      <h3 id="a-session-start-to-finish">セッションの流れ <span class="help-ver" title="Beast Drills version">0.1.0 &middot; 更新 0.2.1</span></h3>
+      <ol>
+        <li>メニューバーから<strong>開始</strong>します（ドリル &rarr; セッション開始、
+        またはテンキー2）。いちばん期限を過ぎているドリルが選ばれます。</li>
+        <li>最初に<strong>ブリーフィング</strong>が表示されます。ドリルの内容、設定、
+        何ができたら成功かが書かれています。「ドリル開始」で始まり、「キャンセル」で戻ります。
+        内容を覚えているなら、設定 &rarr; ブリーフィングを表示 でオフにできます。</li>
+        <li>トレーニングモードの設定はアプリがまとめて適用します &mdash; ダミーの動作、
+        レコーディング、リバーサル、ガード、カウンター設定、立ち位置。ドリルに書かれて
+        <em>いない</em>設定は前の状態を引き継がずにリセットされるので、前のドリルの設定が
+        残ることはありません。</li>
+        <li>レップ（1回の試行）を繰り返します。セッション中はパネルが邪魔にならないよう引っ込みます。</li>
+        <li>規定回数が終わると<strong>ドリル完了</strong>のポップアップに、何回成功したかと評価が表示され、
+        <strong>次のドリル</strong>、<strong>もう一度やる</strong>、<strong>完了</strong>を選べます。</li>
+        <li>終わるとトレーニングモードが元に戻ります。リプレイ停止、ダミーは立ち状態、
+        両者は中央へ。同じ設定のまま手動で練習を続けたいなら、設定 &rarr;
+        <strong>終了時に位置をリセット</strong> をオフにしてください。</li>
+      </ol>
+
+      <h3 id="grades-and-scheduling">評価とスケジュール <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>セッションは Anki と同じく4段階のどれかで評価されます：<strong>もう一度</strong>、
+      <strong>難しい</strong>、<strong>普通</strong>、<strong>簡単</strong>。評価が良いほど次の
+      復習は先に延び、「もう一度」なら翌日に戻ってきて連続成功がリセットされます。評価を自分で
+      選ぶことはありません &mdash; アプリが観測した結果で決まります。</p>
+
+      <h3 id="choosing-what-is-in-rotation">練習するドリルの選び方 <span class="help-ver" title="Beast Drills version">0.1.0 &middot; 更新 0.2.0</span></h3>
+      <p>すべてのドリルにはチェックボックスがあります（ゲーム内とドリルページの両方）。
+      分かりにくいので、ルールを覚えておく価値があります：</p>
+      <ul>
+        <li><strong>何もチェックしていない</strong> &mdash; 予定の来たドリルがすべて対象になります。</li>
+        <li><strong>どれかをチェックしている</strong> &mdash; チェックしたものだけが出ます。</li>
+      </ul>
+      <p>ゲーム内の一覧の上に、今どちらの状態かが表示されます。</p>
+      <p>新しくインストールすると<strong>スターター用の10個のドリルにチェックが入った状態</strong>で
+      始まるので、最初のセッションからいきなりライブラリ全体が出てくることはありません。
+      予定の来たドリルを全部やりたいならチェックをすべて外してください。ただし、何もチェックが
+      ない状態で新しいドリルを追加するアップデートが来ると、スターターに再びチェックが入ります。
+      何かチェックが入っていれば、アップデートはその選択に手を触れません。</p>
+
+      <h3 id="difficulty">難易度 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ドリルには難易度をつけられます &mdash; <code>very-easy</code>、
+      <code>easy</code>、<code>medium</code>、<code>hard</code>、
+      <code>very-hard</code> &mdash; 自動で選ぶときはこれが使われます。初日から
+      1フレームも許されない画面端ルートを渡されても意味がないからです。</p>
+      <ul>
+        <li>簡単な2段階は<strong>最初から開いています</strong>。</li>
+        <li>次の段階は、<strong>ひとつ下の段階のドリル2つ</strong>が連続成功2に
+        達すると開きます。新しいスコアを稼がせるのではなく、スケジュールが既に持っている
+        連続成功をそのまま使います。</li>
+        <li>段階は<strong>順番に</strong>開くので、hard を1つまぐれで通しても very-hard は
+        開きません。</li>
+        <li>難易度の<strong>ない</strong>ドリルには制限がかかりません。「不明」は「難しい」と
+        同じではないからです。</li>
+      </ul>
+      <p>これはアプリが<em>代わりに選ぶとき</em>だけの話です。自分でドリルを選べば
+      いつでも練習できます &mdash; わざわざ取りに行く人から隠すものは何もありません。</p>
+
+      <h3 id="finding-a-drill">ドリルを探す <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ライブラリは大きく &mdash; SuperCombo からの取り込みで2,000を超えています &mdash;
+      そのためドリルページには単なる絞り込みではなく本格的な検索ボックスがあります。画面に
+      見えているものだけでなく全体を検索します。複数の語はAND条件で、すべてを満たすものが出ます。</p>
+      <p class="hint">検索の対象はドリルの<strong>英語の名前とID</strong>です。
+      キャラクターも英語名で入力してください（リュウなら <code>ryu</code>、JP なら <code>jp</code>、
+      不知火舞なら <code>mai</code>）。コンボは <code>2MK</code> のような英語表記で書かれています
+      （弱P = LP、中P = MP、強P = HP、弱K = LK、中K = MK、強K = HK）。</p>
+      <table class="help-table">
+        <thead><tr><th>入力</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td><code>luke</code></td><td>名前・説明・コンボ・IDに含まれる文字</td></tr>
+          <tr><td><code>"drive rush"</code></td><td>空白を含むフレーズ</td></tr>
+          <tr><td><code>-corner</code></td><td>一致<strong>しない</strong>ものすべて</td></tr>
+          <tr><td><code>character:jp</code></td><td>項目で検索。ほかに <code>dummy:</code>、<code>difficulty:</code>、<code>combo:</code>、<code>trains:</code>、<code>trains-for:</code>、<code>position:</code>、<code>name:</code>、<code>id:</code>、<code>desc:</code></td></tr>
+          <tr><td><code>difficulty:&lt;=medium</code></td><td>難易度には順序があるので比較できます</td></tr>
+          <tr><td><code>-difficulty:very-hard</code></td><td>どの項目も否定できます</td></tr>
+          <tr><td><code>selected:yes</code> <code>favorite:yes</code> <code>due:yes</code></td><td>フラグ</td></tr>
+          <tr><td><code>corner -character:jp</code></td><td>自由に組み合わせられます</td></tr>
+        </tbody>
+      </table>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/drills-page.png') }}" alt="ドリルページ：検索ボックス、絞り込みのドロップダウン、ドリル一覧" loading="lazy">
+        <figcaption>ドリルページ。右の件数は、画面に出ている数ではなく、ライブラリ全体のうち
+        検索に一致した数です。</figcaption>
+      </figure>
+
+      <p><strong>種類</strong>、<strong>キャラクター</strong>、<strong>ダミー</strong>の
+      ドロップダウンは同じ検索を使いやすくしたものです &mdash; 選ぶとこの検索に条件が1つ加わるので、
+      入力した語やほかのドロップダウンと重ねて使えます。<em>指定なし</em>は、その項目が空のドリルを探します。</p>
+
+      <p><strong>ゲーム内</strong>のドリルメニューの検索ボックスはもっと単純で、名前とIDの部分一致だけです。
+      名前の分かっているドリルにすぐ行くためのもので、同じ検索言語を2か所で二重に持つためのものではありません。</p>
+
+      <h3 id="matches">対戦記録 <span class="help-ver" title="Beast Drills version">0.1.2</span></h3>
+      <p>実際の対戦 &mdash; アーケード、対戦、ランクマッチ、カジュアルマッチ、バトルハブ、
+      ルームマッチ &mdash; はすべて裏で記録され、<a href="/matches">対戦記録</a>ページで
+      ラウンドごとに、勝ち負けではなく<strong>集計</strong>（何を当て、何を食らったか）にもとづいて評価されます。記録はゲームを
+      <em>読む</em>だけです：何も変更せず、対戦中にゲーム内に何も表示しません。ドリルは
+      <code>trains:</code> で何を鍛えるかを宣言でき、最新の対戦でいちばん悪かった点を鍛える
+      ドリルが次のセッションで先に出ます &mdash; 予定の来たドリルの中での並べ替えで、
+      それらの代わりになることはありません。</p>
+      <p>全対戦の通算成績はずっと残ります。個々の対戦は 50&nbsp;MB を超えると古いものから
+      削除されます（<code>beast_drills.ini</code> の <code>[matches] max_size_mb</code>、
+      0 で無制限）。対戦記録ページで<strong>対戦にスターを付ける</strong>と、その対戦は
+      ずっと残ります。</p>
+
+      <h3 id="belts">帯（ベルト） <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></h3>
+      <p><strong>プロフィール</strong>ページには、使っているキャラクターごとに白から黒までの帯が
+      表示されます。そのキャラクターの<em>帯ドリル</em>の成績から決まります。帯を取るには、
+      その帯のスキルをすべて合格する必要があります：そのスキルのドリルを少なくとも3つ
+      （3つ未満なら全部）70%以上で。帯ドリルもほかのドリルと同じようにスケジュールされ、
+      練習できます。違いは帯に数えられることと、開発者用インストール以外では誤って
+      変更されないよう読み取り専用になっていることだけです。</p>
+
+      <h3 id="practice">練習モード <span class="help-ver is-new" title="Beast Drills version">0.2.1</span></h3>
+      <p><strong>ドリル &rarr; 練習</strong>は、ドリルとまったく同じ設定にゲームを
+      整えます &mdash; ダミー、そのレコーディングとリバーサル、ガード、立ち位置、
+      ゲームスピード &mdash; そしてそのあとは何もしません。10回で止まることも、最後に
+      <em>手応えはどうだったか</em>を聞かれることもなく、<strong>スケジュールにも
+      統計にも何も残りません</strong>。練習しても復習したことにはならないので、
+      次の予定日と連続成功はそのままです。</p>
+      <p>選択しているドリルを練習します。何も選んでいなければ次に予定の来ているドリルです。
+      バーには<em>練習</em>、ドリル名、成功したレップ数が表示されます。コンボドリルでは
+      コンボ手順がこれまでどおり各ステップを点灯させ、SUCCESS を表示します。
+      止めるには同じメニューの<strong>練習を終了</strong>か<strong>テンキー2</strong>。
+      トレーニングモードの設定はセッションのあとと同じく元に戻ります。</p>
+
+      <h3 id="favorites">お気に入り <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ドリルカードのスターで<strong>お気に入り</strong>になります。お気に入りは
+      <strong>ドリルページの先頭</strong>に並びます &mdash; 今見ているページだけでなく
+      ライブラリ全体で &mdash; 検索では <code>favorite:yes</code> で見つかります。</p>
+      <p>お気に入りだけで<strong>練習する</strong>こともできます：<em>お気に入り</em>で
+      セッションを始めると、スターを付けたドリルだけが出ます。ただし予定が来ている必要があります
+      &mdash; お気に入りは候補の絞り込みであって、スケジュールを飛ばす方法ではありません。</p>
+      <p>これは<strong>選択（チェック）</strong>とは別のもので、どちらかが置き換わるのではなく
+      組み合わせて使います：</p>
+      <table class="help-table">
+        <thead><tr><th></th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><strong>選択</strong></td><td><em>今</em>練習の対象にしているもの。何も選ばなければ全部が対象です。</td></tr>
+          <tr><td><strong>お気に入り</strong></td><td>自分で作る長く使う候補リスト。お気に入りのセッションをわざわざ始めたときだけ対象を絞ります。</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="drills-with-no-character">キャラクター指定のないドリル <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ほとんどのドリルはキャラクターが決まっています。決まっていないものもあります &mdash;
+      対空、パリィ、ヒット確認、投げ抜け。これらは<strong>基礎</strong>で、
+      <strong>使うキャラクターごとに別々に</strong>スケジュールされます。</p>
+      <p>JP で対空ができても、リュウで対空ができるかは分かりません。だから片方を練習しても
+      もう片方は済んだことになりません。今使っているキャラクターでまだ練習したことのない基礎は
+      <em>新規</em>扱いで、すぐに出てきます &mdash; ほかのキャラクターでどれだけできていてもです。</p>
+      <p>ドリルページも同じ考え方です：ゲームの起動中は、表示されている状態が実際に
+      読み込まれているキャラクターのものになります。ゲームを閉じていると対象のキャラクターが
+      いないので、全キャラクターをまとめた表示になります。</p>
+
+      <h3 id="where-the-drills-came-from">ドリルの出どころ <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ライブラリの大部分は、英語圏の格闘ゲームwiki <strong>SuperCombo wiki</strong> から取り込んだものです：
+      全30キャラクターでおよそ2,000のコンボで、各コンボの位置、ダメージ、難易度、メモも
+      一緒に取り込んでいます。全キャラクターのフレームデータも合わせて取り込んでいます。</p>
+      <p>取り込んだドリルはわざと<strong>チェックなし</strong>で入ります。自分で何かを
+      加えるまでは、あなたの選んだものが練習の中心のままです &mdash; 見知らぬ2,000個に
+      練習を乗っ取られるべきではありません。</p>
+      <p>wiki のコンボのすべてを正確に変換できたわけではありません。アプリが正確に表せない
+      表記のコンボは、近いもので代用せず<em>取り込みを見送って</em>います：少しずれた成功
+      ルールはずっと「もう一度」と評価され続け、検出の故障とまったく見分けがつかないからです。</p>
+
+      <h3 id="when-a-drill-cannot-score">ドリルが採点できないとき <span class="help-ver" title="Beast Drills version">0.1.0 &middot; 更新 0.2.1</span></h3>
+      <p>セッション中、ドリルメニューに次の3つの警告が出ることがあり、どれもあなたの失敗では
+      ありません：</p>
+      <ul>
+        <li><strong>「成功条件がありません。このドリルは採点できません」</strong> &mdash; 何をもって成功とするか
+        のルールがドリルにないので、どうプレイしても毎回「もう一度」になります。ドリルページで
+        直してください。</li>
+        <li><strong>「このダミーのレコーディングスロットが空です」</strong> &mdash; ドリルが指定しているレコーディングスロットに、今の相手キャラクターの
+        記録がないので、ダミーは立っているだけになります。レコーディングはキャラクターごとです。</li>
+        <li><strong>「採点できない成功条件：&hellip;」</strong> &mdash; ドリルが、採点の
+        仕方を誰も知らない成功カテゴリーを求めています。成功条件がないのと同じ結果ですが、原因は
+        空欄ではなく名前です。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel panel-cyan" id="wongscript">
+    <div class="panel-head"><h2>WongScript</h2></div>
+    <div class="help-body">
+      <p>WongScript（<code>.wong</code>）は、ドリルを1行に1つの設定で書くテキスト形式です。
+      ドリル作成フォームで保存したものとまったく同じ内容になります &mdash; フォームの代わりではなく、
+      もうひとつの編集方法です。書いた行だけが初期値を上書きし、書かなかった項目は設定されません。</p>
+
+      <div class="help-example">
+        <strong>ボタンの書き方について：</strong>WongScript はボタンを英語の略号で書きます。
+        <strong>LP = 弱P、MP = 中P、HP = 強P、LK = 弱K、MK = 中K、HK = 強K</strong>、
+        <strong>PP / KK = OD</strong>、<strong>HPHK = ドライブインパクト</strong>、
+        <strong>MPMK = ドライブパリィ</strong>。方向はおなじみのテンキー表記です
+        （236 = 波動拳コマンド、623 = 昇竜拳コマンド、214 = 竜巻コマンド、2 = しゃがみ）。
+        つまり「しゃがみ中K &gt; 波動拳（中P）」は <code>2MK, 236MP</code> と書きます。
+      </div>
+
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/wongscript-tab.png') }}" alt="ドリルの新規作成／編集画面のWongScriptタブ" loading="lazy">
+        <figcaption>WongScriptタブ。保存を押すとテキストをその場で読み取って保存します &mdash; 別の変換手順はありません。</figcaption>
+      </figure>
+
+      <h3 id="a-full-example">記述例 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>相手の起き上がりに、遅らせ投げと何もしないの二択をさせ、遅らせ投げにはカウンター、
+      何もしないなら投げで返すドリルです：</p>
+      <pre class="mono help-example">title: CH VS DELAYED THROW TECH
+description: "Counter on dummy throwing, throw on dummy doing nothing"
+position: dummy-corner-right
+block: block-after-first-hit
+dummy: ryu
+reps: 10
+game-speed: 5
+response-window: 20
+
+wake-up-rev-slot: 0
+action: type=common skill=normal-throw, 4f
+success: counter-hit, punish-counter-hit
+
+wake-up-rev-slot: 1
+action: type=common skill=do-nothing, 0f
+success: throw
+
+fixed-success: throw, counter-hit, punish-counter-hit</pre>
+
+      <h3 id="two-different-ways-to-set-what-the-dummy-does">ダミーの動きを決める2つの方法 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>SF6にはダミーを動かす仕組みが2つあり、WongScript ではそれぞれ書き方が違います：</p>
+      <ul>
+        <li><strong>リバーサル設定</strong> &mdash; ダミーの通常技・必殺技・SA・共通アクション
+        （前歩き、バックステップ、投げなど）からメニューで選ぶ方式です。WongScript ではスロットの下の
+        <code>action:</code> 行がそのまま「ダミーが出すもの」になります（<code>type=</code> ＋
+        <code>skill=</code> ＋ 遅らせるフレーム数）。上の例はこの方式です。SF6のリバーサル設定は
+        出すタイミングの違う<strong>3つのタブ（各10スロット）</strong>に分かれていて、
+        WongScript にもそれぞれのキーがあります：
+          <ul>
+            <li><code>wake-up-rev-slot:</code> &mdash; ダミーがダウンから起き上がるときに出します（起き上がりリバーサル）。</li>
+            <li><code>block-rev-slot:</code> &mdash; ダミーが攻撃をガードした直後に出します（ガード後のリバサ・暴れ）。</li>
+            <li><code>damage-rev-slot:</code> &mdash; ダミーが攻撃を食らった直後に出します。</li>
+          </ul>
+        ドリルで使うのは、練習したい場面に合う1つだけでかまいません。ほとんどのドリルは1つです。</li>
+        <li><strong>レコーディングスロット</strong>（<code>rec-slot:</code>）&mdash; 自由な入力を
+        記録したもので、リバーサルのメニューにない動き（連携、重ね、仕込みなど）も再現できます。
+        リバーサル設定とはまったく別の仕組みです。中身を入れる方法は2つあります：トレモで
+        ダミーの動きを手で記録してから<strong>現在の設定をドリルとして保存</strong>（ゲーム内か
+        ダッシュボード）で記録をドリル自体に取り込む方法 &mdash; 以後はドリルを始めるたびに
+        記録がスロットに書き込まれて再生されるので、トレモ側のスロットの中身に左右されません。
+        もうひとつは WongScript の <code>action:</code> に直接書く方法です（リバーサルと同じ
+        キーワードですが、こちらでは内蔵の技ではなく実際のコマンド表記を書きます。次の節を
+        参照）。単純な入力ならトレモでの記録は要りません。<code>rec-slot:</code> 行はそのスロット
+        （と、どちらかの方法で入れた中身）を有効にするだけです。トレモの記録も、取り込んだ記録も、
+        <code>action:</code> 行もないスロットを指定すると、黙って何もしないのではなく
+        「スロットが空です」と警告が出ます。さらにドリルごとに、SF6のリプレイ設定画面と同じ
+        2つを設定できます：<code>weight:</code>（ランダム選択の比率 &mdash; 複数のスロットが
+        有効なとき、値が大きいほどそのスロットがよく選ばれます）と、ドリル全体の
+        <code>repeat-replay:</code>（リピート再生：オフ／オン／常に）です。</li>
+      </ul>
+      <p class="hint">迷ったら：メニューから選べる技で済むならリバーサル設定、
+      連携や細かいタイミングが要るならレコーディングスロットです。実際のドリルは、最初は
+      レコーディングが要りそうに見えても、リバーサル設定で済むことがほとんどでした。</p>
+      <pre class="mono help-example">title: Example Recorded Meaty
+position: player-corner-left
+reps: 10
+repeat-replay: always
+
+rec-slot: 0
+action: 236HP, [6:10f], 22LK, [4:4f]
+weight: 1
+success: perfect-parry</pre>
+      <p class="hint">（強P波動拳のあと前に10フレーム歩き、22弱K、後ろに4フレーム &mdash;
+      これにジャスパで返せたら成功、という重ねの練習です。）<code>action:</code> 行を省いた
+      スロットは、トレモで記録済みか、以前の取り込みでドリルに記録が入っている必要があります
+      &mdash; <code>rec-slot:</code> と <code>weight:</code> だけでは中身は作られません。
+      中身を作るのは <code>action:</code> だけです。</p>
+
+      <h3 id="recorded-pattern-notation">レコーディングの入力の書き方 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>レコーディングスロットでダミーが実際に入力する内容です。コンボ表記と同じ書き方
+      （<code>236P</code>、<code>623P</code>）で書けますが、1つだけ追加があります：長く押し続ける
+      入力（特に溜め）のために、フレーム数を明示する括弧の書き方です。普通のコンボ表記は
+      フレーム数を書きませんが、ダミーに入力させるには必要だからです。</p>
+      <ul>
+        <li><strong>通常の入力</strong> &mdash; 方向（テンキーの1〜9、ニュートラルは 5 か
+        <code>N</code>）かボタン（<code>LP</code>/<code>MP</code>/<code>HP</code>/
+        <code>LK</code>/<code>MK</code>/<code>HK</code>）で、それぞれ2フレーム押します
+        &mdash; <code>236HP</code> のような普通のコマンド入力と同じ速さです。区切らずに続けて
+        書くとコマンドになります：<code>236HP</code> は 下、右下、そして 右＋強P を<strong>同時</strong>に。
+        （コマンドの最後の方向は直後のボタンと必ず同時押しになるので <code>+</code> は要りません
+        &mdash; 実際のプレイヤーも最後の方向とボタンは同時に入れます。手前の方向、ここでは
+        <code>2</code> と <code>3</code> はそれぞれ別の入力のままです。）数字なしのボタンだけ
+        （例：<code>HP</code>）はニュートラルでのボタン押しです。</li>
+        <li><strong>押し続ける入力</strong> &mdash; <code>[&lt;入力&gt;:&lt;n&gt;f]</code>。
+        例：<code>[6:10f]</code>（前に10フレーム）、<code>[2:5f]</code>（下に5フレーム、溜めの場合）。
+        溜め技も上の同時押しのルールと組み合わせるだけです：<code>[2:5f]8HK</code> は
+        下に5フレーム溜めてから、上＋強Kを同時に押して離します。</li>
+        <li><strong>同時押し</strong> &mdash; どちらの書き方でも <code>+</code> でつなぎます：
+        <code>HP+HK</code>（ドライブインパクト、すばやく同時押し）、<code>[6+HP:8f]</code>
+        （前＋強Pを8フレーム押し続ける）。ボタンを2つ以上続けて書く（<code>HPHK</code>）のも同時押し
+        です &mdash; <code>HP+HK</code> と同じ意味で、インパクトやラッシュを短く書けます。
+        方向のすぐ後ろのボタンも常に同時押しになります（上の「通常の入力」）。方向とボタンを本当に
+        <strong>別々に</strong>押したいときは、どちらかを括弧で押し続ける形にします。例：
+        <code>[6:2f]HP</code>。</li>
+        <li><strong>ステップと切り返し</strong> &mdash; 同じ方向を2回（または真逆の方向を）
+        続けて書くと、間に見えない「離し」が自動で入り、1回の長押しではなく2回の入力として
+        認識されます：<code>66</code>（前ステップ）、<code>44</code>（バックステップ）、
+        <code>46</code>、<code>28</code>、斜めの逆方向も同じです。括弧で書いても同じで、
+        <code>[6:2f][6:2f]</code> にも <code>66</code> と同じ離しが入ります。ドライブラッシュにも
+        特別な書き方は要りません：生ラッシュはコンボの最初に <code>66MPMK</code>、
+        キャンセルラッシュはコンボの途中に <code>MPMK</code> だけです。例外はなく、溜めの解放も
+        同じなので <code>[2:45f]8HK</code> は「下に45フレーム、ニュートラル、上＋強K同時」と読みます。</li>
+      </ul>
+      <p class="hint"><strong>カンマは見やすさのためだけでなく、本当の区切りです。</strong>
+      カンマで区切った2つがどちらも技なら、その間に約0.1秒のニュートラルが自動で入ります。
+      理由は実際に起きた不具合です：前歩きの押し続けから区切らずに波動拳コマンドを書いた
+      （<code>[6:20f]236HP</code>、カンマなし）ところ、ダミーがまったく別の必殺技を出しました。
+      SF6の入力判定は直前の入力の流れ全体を見るので、押し続けの最後とコマンドの最初が偶然
+      別のコマンドになっていたのです。カンマで区切る（<code>[6:20f], 236HP</code>）と、
+      見えないニュートラルが間に入り、それぞれのコマンドがきれいに認識されます。この間は自動で、
+      テキストには表示されません。例外が2つあります：1つの入力の中（<code>236HP</code> の各方向）には
+      入りません。また、自分で書いたニュートラル（<code>[N:12f]</code>、<code>N</code> など）の隣にも
+      入りません &mdash; 自分で書いた間が同じ役目を果たすので、重ねて入れません。自分で書いた
+      ニュートラルは表示し直しても消えず、カンマも残ります：<code>4, N, 6HP, N, 2, N, 8HK</code> は
+      いつでもそのまま表示されます。既存のドリルの記録を WongScript で開くと、各入力が実際の
+      フレーム数つきの括弧の形で表示されます。トレモで記録した入力のタイミングは2フレームの初期値と
+      一致しないことが多いからで、手で書いたものより長くなりますが、内容は正確です。</p>
+
+      <h3 id="every-line-what-it-does">各行の意味 <span class="help-ver" title="Beast Drills version">0.1.0 &middot; 更新 0.2.0</span></h3>
+      <table class="help-table">
+        <thead><tr><th>行</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><code>title:</code></td><td>ドリルの名前。必須で、どのドリルにも要るのはこの行だけです。</td></tr>
+          <tr><td><code>description:</code></td><td>自由な説明文。ドリルカードに表示されます。</td></tr>
+          <tr><td><code>position:</code></td><td>開始位置。<code>dummy-corner-right</code>（ダミーが右端）、<code>dummy-corner-left</code>（ダミーが左端）、<code>player-corner-left</code>（自分が左端）、<code>player-corner-right</code>（自分が右端）、<code>center</code>（中央）、<code>center-reversed</code>（中央・左右入れ替え）のどれか。</td></tr>
+          <tr><td><code>block:</code></td><td>ダミーのガード。<code>no-guard</code>（ガードしない）、<code>block-after-first-hit</code>（初段を食らったあとはガード、初期値）、<code>all-block</code>（すべてガード）、<code>random-guard</code>（ランダム）のどれか。</td></tr>
+          <tr><td><code>character:</code></td><td>自分の使うキャラクター。そのキャラクターのドリルとして表示されます。省略可。キャラクター名は英語のID（<code>ryu</code>、<code>jp</code> など）で書きます。</td></tr>
+          <tr><td><code>dummy:</code></td><td>相手のキャラクター。下の <code>action:</code> の技名を解決するのに使います（次の節）。省略可で、<code>character:</code> とは別です。</td></tr>
+          <tr><td><code>reps:</code></td><td>1セッションのレップ数。省略すると10。</td></tr>
+          <tr><td><code>game-speed:</code></td><td>0〜10（速度50%〜150%）の手動指定。省略すると自動で、覚えている途中は遅く、連続成功が続くと通常速度になります。</td></tr>
+          <tr><td><code>response-window:</code></td><td>反応がないレップを失敗とみなすまでの猶予フレーム。省略で初期値。</td></tr>
+          <tr><td><code>attempts:</code></td><td>何を「1回」と数えるか。<code>slot</code>（初期値）はダミーのレコーディングかリバーサルが出るたびに1回 &mdash; ダミーが動いてあなたが答える場面です。<code>action</code> は<em>あなた</em>が採点される行動をするたびに1回で、ヒット確認の練習向きです（レコーディングは自分のタイマーで繰り返すので、あなたが何回試したかは分からないため）。コンボドリルはこの設定に関係なく、常にコンボを数えます。成功条件に <code>do-nothing</code> があるなら <code>slot</code> のままにしてください &mdash; 1回の区切りは「何かが起きたこと」で決まるので、正しく何もしなかったことでは区切れません。</td></tr>
+          <tr><td><code>wake-up-rev-slot: N</code></td><td>起き上がりリバーサルのスロットNを開きます。直後の <code>action:</code>/<code>success:</code> 行は、次のスロット行までこのスロットのものです。</td></tr>
+          <tr><td><code>block-rev-slot: N</code></td><td>ガード後リバーサルのスロットN（ダミーがガードした直後に出す）。書き方は同じ。</td></tr>
+          <tr><td><code>damage-rev-slot: N</code></td><td>ダメージ後リバーサルのスロットN（ダミーが食らった直後に出す）。書き方は同じ。</td></tr>
+          <tr><td><code>rec-slot: N</code></td><td>レコーディングスロットNを開きます。直後の <code>action:</code>/<code>weight:</code>/<code>success:</code> 行は、次のスロット行までこのスロットのものです。</td></tr>
+          <tr><td><code>weight: N</code></td><td><code>rec-slot:</code> の中だけ。ランダム選択の比率 &mdash; 複数のレコーディングスロットが有効なとき、この値の比で選ばれます。省略すると1（均等）。</td></tr>
+          <tr><td><code>repeat-replay: off|on|always</code></td><td>ドリル全体の設定で、すべてのレコーディングスロットにかかります。SF6のリピート再生の設定と同じです。省略すると今の設定のまま。</td></tr>
+          <tr><td><code>action:</code></td><td>開いているスロットの種類で意味が変わります。リバーサルのスロットの中では <code>type=&lt;種類&gt; skill=&lt;名前&gt;, &lt;n&gt;f</code>（下の「技の指定」を参照）。<code>rec-slot:</code> の中ではダミーの実際の入力をコマンド表記で（<code>236HP</code>、<code>[6:10f]</code> など &mdash; 上の「レコーディングの入力の書き方」）。レコーディングスロットでは省略可 &mdash; トレモの記録か以前の取り込みで中身があれば要りません。</td></tr>
+          <tr><td><code>success:</code></td><td>そのスロットで<em>あなた</em>が何をしたら成功か。どれか1つでよければカンマ区切り（例：<code>counter-hit, punish-counter-hit</code>）、<em>順番どおり</em>に必要なら <code>&gt;</code> &mdash; <code>block &gt; hit</code> は「ガードしてから当てる」。下の「順番のある成功条件」を参照。</td></tr>
+          <tr><td><code>fixed-success:</code></td><td>どのスロットが出ても毎回使う成功条件。どのスロットが出たか判別できなくても、どの結果も同じ基準で採点するドリル向けです。</td></tr>
+          <tr><td><code>combo:</code> <span class="help-ver" title="Beast Drills version">更新 0.2.0</span></td><td>そのスロットでの「この技／このコンボを当てる」という成功条件。<code>action:</code> と同じコマンド表記で書きます（<code>2MK, HP, 236MP</code> ＝ しゃがみ中K、立ち強P、中P波動拳）。技1つなら当てるだけ、複数なら本当にコンボとしてつながる必要があります。前方一致なので、<em>最後に</em>追加でつなぐのはかまいません &mdash; コンボを伸ばして減点されることはありません。書いた技は<strong>途切れずに順番どおり</strong>当たる必要があり、技と技の<em>間</em>に別のヒットが入ると別のコンボとみなされます。間を空けてよい場所は <code>...</code> で示します。<code>...</code> は「ここは何でもよい」という意味で、<em>先頭</em>に置くと最初のヒットからでなくどこからでも一致し（始動技を問わないコンボ用 &mdash;「何かの強攻撃始動 &gt; ...」）、<em>途中</em>に置くと間を空けられます &mdash; <code>HP, HP, ..., 236HP</code> は強P2回、何か、そして強P波動拳。<code>special</code> は使用キャラクターの必殺技どれでもという意味で、<code>2MK, special</code> は誰でも使える必殺技キャンセルのコンボになります。SAは必殺技に含みません。</td></tr>
+          <tr><td><code>fixed-combo:</code></td><td>同じものを、どのスロットが出ても毎回使う設定 &mdash; <code>fixed-success:</code> のコンボ版です。</td></tr>
+          <tr><td><code>health:</code> <code>drive:</code> <code>sa:</code></td><td>毎レップの開始時の体力・ドライブゲージ・SAゲージ。数字1つは<em>自分</em>の値、カンマで2つなら <code>自分, 相手</code> &mdash; <code>position:</code> と同じ形です。体力は10%単位の割合、ドライブは0〜6、SAは0〜3。<code>drive: 0, 6</code> は相手がゲージ満タンでのバーンアウト練習、<code>sa: 3</code> は Lv3 を使える状態です。省略するとゲームの初期値（体力満タン、ドライブ満タン、SAなし）になり、これは<em>毎回</em>適用されるので、バーンアウトのドリルのあとにゲージが空のまま残ることはありません。</td></tr>
+          <tr><td><code>health-recovery:</code> <code>drive-recovery:</code> <code>sa-recovery:</code></td><td>設定したあとのゲージの<em>動き方</em> &mdash; 同じく <code>自分, 相手</code> の形。<b>refill</b>（初期値）は毎レップ値を戻し、ドリルをドリルにするのはこれです。<b>standard</b> は対戦と同じで、2レップ目は1レップ目の終わりの状態から始まります。<b>fixed</b> はゲージを固定し、まったく動きません。初期値以外を使うことはまれで、<code>health-recovery: standard</code> は負けることもありうるドリル用です。</td></tr>
+          <tr><td><code>cpu-level:</code></td><td>Lv1〜8。ダミーをCPUにしたドリル用です。</td></tr>
+          <tr><td><code>dummy-controls:</code> <span class="help-ver is-new" title="Beast Drills version">0.2.1</span></td><td>ゲームのダミー設定の「ダミーの操作」：<code>stand</code>（通常のダミー）、<code>human</code>（2P側を人が操作）、<code>cpu</code>（CPU）。<em>現在の設定をドリルとして保存</em>で自動的に書かれ、ドリルを編集しても残ります。省略すると通常のダミーです。</td></tr>
+          <tr><td><code>counter:</code></td><td><code>standard</code>（初期値）、<code>counter</code>（常にカウンター）、<code>punish-counter</code>（常にパニカン）、<code>random</code> のどれか。ダミーをその状態に固定するので、パニカン始動のコンボをレコーディングなしで練習できます。</td></tr>
+          <tr><td><code>require-slot:</code></td><td><code>yes</code>（初期値）か <code>no</code>。<code>no</code> はレコーディングスロットが<em>背景</em>扱いになるという意味です &mdash; 棒立ちの相手を殴らないようダミーに何かさせますが、どのスロットが出たかは成功に関係しません。採点は <code>fixed-combo:</code>/<code>fixed-success:</code> だけで行います。</td></tr>
+          <tr><td><code>trains:</code></td><td>このドリルが直す<em>食らった側</em>の集計カテゴリーをカンマ区切りで（例：<code>trains: got_thrown, got_hit</code> ＝ 投げられた、食らった）。記録した対戦で多く起きたことを順位づけし、それを直すと宣言したドリルが先に出ます。省略可。知らないカテゴリー名は無視せずエラーにします。</td></tr>
+          <tr><td><code>trains-for:</code></td><td>もう片方、<em>自分がしたこと</em>の集計から：このドリルが防ぐミスではなく、<em>身につける</em>技術（例：<code>trains-for: hit_confirm</code> ＝ ヒット確認）。語彙は別で、<code>got_thrown</code> のような食らった側のカテゴリーはここではエラーです &mdash; 「投げられる」を身につけるドリルはありません。省略可で、両方・片方・なしのどれでもかまいません。</td></tr>
+          <tr><td><code>belt-drill:</code> <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></td><td>ドリルを帯ドリルにし、プロフィールの帯に数えるようにします。教えるスキル名を書くと &mdash; <code>belt-drill: anti-air</code>（対空）&mdash; そのスキルの最初の帯に置かれ、<code>difficulty:</code> が easy より1段上がるごとに帯も1つ上がります。帯を自分で固定するなら <code>belt-drill: anti-air, blue</code>。<code>belt-drill: combo</code> はコンボを難易度だけで置きます（very-easy は黄、easy は青、medium は赤、hard は黒）ので <code>difficulty:</code> 行が必要です。<code>belt-drill: no</code> か、行がなければ普通のドリルです。どの帯に数えられるかはエディターに表示されます。帯ドリルを変更できるのは開発者用インストールだけで、それ以外では読み取り専用です。</td></tr>
+          <tr><td><code>difficulty:</code></td><td><code>very-easy</code>、<code>easy</code>、<code>medium</code>、<code>hard</code>、<code>very-hard</code> のどれか。自動選択に制限をかけるので、初心者にいきなり1フレーム目押しのルートが出ることはありません（<a href="#practising">難易度</a>を参照）。省略可 &mdash; 難易度のないドリルには制限がかかりません。「不明」は「難しい」と同じではないからです。</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="what-you-can-put-after-success"><code>success:</code> に書けるもの <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>採点できる値の一覧です。1つのスロットにカンマ区切りで複数書くと、どれか1つで成功になります。</p>
+      <table class="help-table">
+        <tr><th>条件</th><th>成功になるのは&hellip;</th></tr>
+        <tr><td><code>anti-air</code></td><td>対空。相手が空中にいるところに当てたとき。先に空中にいることが必要で、ジャンプ前に当たったものは数えません。</td></tr>
+        <tr><td><code>throw</code></td><td>投げが決まったとき。「相手がダメージを受けた」ではなく、両者の状態を同じフレームで確認した本当の投げです。</td></tr>
+        <tr><td><code>throw-tech</code></td><td>相手の投げを投げ抜けしたとき。投げられたら失敗です。</td></tr>
+        <tr><td><code>block</code></td><td>相手の攻撃をガードしたとき。</td></tr>
+        <tr><td><code>block-then-punish</code></td><td>ガードして<em>から</em>反撃したとき（ガード後の確反）。順番が大事で、先に当たったものは反撃ではありません。</td></tr>
+        <tr><td><code>counter-hit</code></td><td>カウンターヒットしたとき &mdash; 画面に COUNTER と出る、ゲーム自体の判定です。</td></tr>
+        <tr><td><code>punish-counter-hit</code></td><td>パニッシュカウンター（パニカン）で当たったとき。</td></tr>
+        <tr><td><code>perfect-parry</code></td><td>ジャストパリィ（ジャスパ）したとき。通常のパリィは数えません。このドリルは先にダウンさせられることが多いので、ダメージを受けても失敗にはなりません。</td></tr>
+        <tr><td><code>reversal</code></td><td>動けるようになった最初のフレームで行動したとき（リバサ）&mdash; ゲームが COUNTER の横に出す REVERSAL の表示です。ダメージについても同じで、ダウンさせられるのがドリルの始まりです。</td></tr>
+        <tr><td><code>drive-impact</code></td><td>自分のドライブインパクトが当たったとき。</td></tr>
+        <tr><td><code>stuff-dash</code></td><td>相手のステップを潰したとき &mdash; 近くで当たっただけでなく、ステップを止める当たり方が必要です。</td></tr>
+        <tr><td><code>stuff-drive-rush</code></td><td>相手のドライブラッシュを潰したとき（カウンターかパニカンで）。</td></tr>
+        <tr><td><code>drive-impact-counter</code></td><td>相手のインパクトを潰したとき &mdash; 出がかりに当てて止めたとき。</td></tr>
+        <tr><td><code>drive-impact-vs-di</code></td><td>インパクト返し &mdash; 両者がインパクトを出し、自分が勝ったとき。</td></tr>
+        <tr><td><code>hit-confirm</code></td><td>ヒット確認。始動技が当たり、そのあと追撃が続いたとき &mdash; <code>hit &gt; combo</code> とまったく同じです。始動技だけでは確認になりません：結果が分かる前に出す技だからで、測っているのはそのあとの判断です。コンボ中に食らっても失敗にはなりません。ガードされたあとに攻めを継続できたことも評価したいなら、横に <code>pressure</code> を加えてください。</td></tr>
+        <tr><td><code>pressure</code></td><td>攻め継続。相手にガードされたあと、次の技を当てたとき &mdash; <code>got-blocked &gt; hit</code>。ヒット確認ではなく、自分のターンを続けることです。</td></tr>
+        <tr><td><code>do-nothing</code></td><td>正しく何もしなかった（暴れなかった）とき。この条件は <code>attempts: action</code> と一緒には使えません &mdash; 1回の区切りは「何かが起きたこと」で決まるからです。</td></tr>
+      </table>
+
+      <h3 id="success-in-order">順番のある成功条件 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>カンマは<em>どれか1つ</em>、<code>&gt;</code> は<em>これをして、それから次</em> &mdash;
+      レップを成功にするために必要な順番です。</p>
+      <pre>success: block &gt; hit          ガードしてから当てる
+success: hit &gt; combo          当ててから追撃が続く
+success: block &gt; hit &gt; combo  段数はいくつでも
+success: hit &gt; combo, block &gt; hit    どちらの流れでも成功</pre>
+      <p>順番はあとから推測するのではありません。レップ中にそれぞれが最初に起きた瞬間を
+      記録しているので、<code>block &gt; hit</code> は本当にガードが先だったことを意味します
+      &mdash; 当ててからガードしたレップは確反ではなく、失敗として採点されます。</p>
+      <p>つなげられるのは次のものです（<em>自分</em>から見た名前）：</p>
+      <p><strong>自分がしたこと：</strong><code>hit</code>（当てた）、<code>combo</code>（コンボ）、
+         <code>attack</code>（攻撃を出した）、<code>block</code>（ガード）、<code>parry</code>（パリィ）、
+         <code>perfect-parry</code>（ジャスパ）、<code>throw</code>（投げ）、
+         <code>throw-tech</code>（投げ抜け）、<code>counter-hit</code>（カウンター）、
+         <code>punish-counter</code>（パニカン。<code>punish-counter-hit</code> とも書けます）、
+         <code>anti-air</code>（対空）、<code>reversal</code>（リバサ）、<code>backroll</code>（後ろ受け身）、
+         <code>wakeup</code>（起き上がり）、<code>drive-impact</code>、<code>drive-impact-counter</code>、
+         <code>drive-impact-vs-di</code>、<code>stuff-dash</code>、<code>stuff-drive-rush</code>。<br>
+         <strong>相手にされたこと：</strong><code>got-hit</code>（食らった）、
+         <code>got-blocked</code>（ガードされた）、<code>got-thrown</code>（投げられた）、
+         <code>got-counter-hit</code>（カウンターを食らった）、<code>got-punish-countered</code>（パニカンを食らった）、
+         <code>got-drive-impacted</code>（インパクトを食らった）、<code>got-anti-aired</code>（対空された）。</p>
+      <p>上の表の条件は <code>do-nothing</code> 以外すべてこの形でつなげられます。
+         <code>do-nothing</code> が使えないのには理由があります：順番は「いつ起きたか」を見るので、
+         何も起きないことには瞬間がないのです。</p>
+      <p>つなげられ<em>ない</em>のは技です。<code>punish-counter-hit &gt; DR &gt; ...</code> は
+         自然に読めますが、意味が違います &mdash; ここに書くのは結果（誰に何が起きたか）であって、
+         押したボタンではありません。どの技を出したかは、<code>combo:</code> 欄のコンボ表記で判定します。</p>
+      <p>上の表の名前のいくつかは、これらの流れの短縮形で、どちらで書いても同じです
+         &mdash; 読みやすいほうを使ってください：</p>
+      <pre>hit-confirm        =  hit &gt; combo
+pressure           =  got-blocked &gt; hit
+block-then-punish  =  block &gt; hit</pre>
+
+      <h3 id="test-drills">テスト用ドリル <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>IDが <code>debug_</code> で始まるドリルは<strong>テスト用ドリル</strong>です：
+         何かを教えるためではなく、検出の仕組みを試すためのものです。<code>debug_ ○○</code> と
+         名前をつけるとテスト用になります。ドリル検索で <code>debug_</code> と入力すると見つかります。</p>
+      <p>普通のドリルとの違いは2つだけで、どちらも意図したものです。<b>自動では出てきません</b>
+         &mdash; セッションに入ることも連続成功に数えることもありません &mdash; そして
+         <b>配布されません</b>ので、他人のテスト用の仕掛けがインストールされることはありません。
+         自分で選べば普通に動きます。そのためのものです。</p>
+      <p>決めるのは名前ではなく<em>ID</em>で、これも意図どおりです：IDはドリルを作ったときに一度
+         決まり、編集では変わらないので、テスト用ドリルを名前の変更で本物にして、スケジュールされたり
+         配布されたりすることはありません。説明には、何を見ればよいか<em>と、失敗したらどう見えるか</em>
+         を書いてください。テスト用ドリルがあるのは、確かめたいことがコードを読むだけでは
+         確認できないからです。</p>
+
+      <h3 id="action-names-type-and-skill">技の指定 &mdash;「type」と「skill」 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>起き上がりリバーサルの選択肢はどれも5つの種類（<code>type=</code>）のどれかに属し、
+      その種類の一覧の何番目かが <code>skill=</code> です。どちらもゲーム自体の内部データと、
+      実際のゲーム内のリバーサル設定のメニューで確認したもので、推測ではありません。</p>
+      <ul>
+        <li><code>type=common</code> &mdash; 全キャラクター共通の一覧：<code>do-nothing</code>（何もしない）、<code>forward</code>（前歩き）、<code>backward</code>（後ろ歩き）、<code>forward-dash</code>（前ステップ）、<code>back-dash</code>（バックステップ）、<code>vertical-jump</code>（垂直ジャンプ）、<code>forward-jump</code>（前ジャンプ）、<code>backward-jump</code>（後ろジャンプ）、<code>normal-throw</code>（通常投げ）、<code>drive-parry</code>（ドライブパリィ）、<code>drive-impact</code>（ドライブインパクト）。</li>
+        <li><code>type=normal</code>（通常技）、<code>type=command-normal</code>（特殊技）、<code>type=special</code>（必殺技）、<code>type=sa</code>（SA）&mdash; これらは<strong>キャラクターごと</strong>です（<code>normal</code> も、考え方は全員同じ12個の通常技ですが、一覧はキャラクターごとに保存されています）。そのキャラクターの技一覧を取得済みのときだけ技名で書けます（今のところ取得済みはリュウだけです）。使うときは <code>dummy:</code> に相手のキャラクターを書いてください。技名が分からないときは、WongScript は推測せず、どの行が問題かを教えてくれます。</li>
+      </ul>
+      <p>まだ一覧を取得していないキャラクターでも、番号で直接書けます &mdash;
+      <code>action: type=special skill=2, 0f</code> &mdash; 一覧が取得できたらあとで直せばよいのです。
+      ダッシュボードのフォームのタブも同じです：スロットの「ダミーの行動」で種類を選ぶと、
+      取得済みのキャラクターを <code>dummy:</code> に選んでいれば技名のドロップダウンになり、
+      そうでなければ（未取得のキャラクターでも）番号の入力欄になります。</p>
+    </div>
+  </section>
+
+  <section class="panel" id="dashboard-tools">
+    <div class="panel-head"><h2>ドリルの作成</h2></div>
+    <div class="help-body">
+      <h3 id="creating-and-editing-a-drill">ドリルの作成と編集 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p><strong>＋新規ドリル</strong>（既存のドリルなら<strong>編集</strong>）を押すと編集画面が
+      開きます。タブが2つあり、どちらで保存しても同じものになります：</p>
+      <ul>
+        <li><strong>フォーム</strong> &mdash; クリックで作る編集画面です：名前、説明、
+        開始位置やガードのドロップダウン、キャラクターと相手のドロップダウン、スロットごとに
+        チップを選ぶ成功条件。</li>
+        <li><strong>WongScript</strong> &mdash; 既存のドリルを編集するときは、このタブを最初に
+        開いたときに今の設定がスクリプトとして読み込まれます（あとでタブを行き来しても読み込み直して
+        入力中の内容を消すことはありません）。新しいドリルは空のスクリプトから始まり、一から書けます。
+        書くか直すかして保存を押すだけで、ボックスの内容をそのまま読み取ります &mdash;「先にフォームを
+        埋める」手順はありません。エラーは行番号つきでその場に表示されます。</li>
+      </ul>
+      <p>どちらのタブでも、確定するのは下の<strong>保存</strong>ボタンです &mdash; WongScript
+      タブでは、保存の前にテキストを読み取り、読み取れなければ実際のエラーを表示して保存を中止します。
+      フォームタブに残っていた古い内容を黙って保存することはありません。</p>
+
+      <h4>おすすめ：フォームで作って、WongScript で仕上げる</h4>
+      <p>Beast Drills のドリルは実際にこうやって作られています。開発者の Jason いわく
+         <em>「まずフォームでドリルを作って、そのあとに細かいスクリプトを足す。スクリプトを
+         全部手で書かなくて済むから」</em>。</p>
+      <ol>
+        <li><strong>フォーム</strong>でドリルを作ります &mdash; 名前、キャラクター、
+            開始位置、スロット、分かりやすい成功条件。手で打つと面倒なところは全部ここで。</li>
+        <li><strong>WongScript</strong> タブに切り替えます。今作ったドリルがもう書き出されています
+            &mdash; 先に保存する必要はなく、まだ一度も保存していない新しいドリルでも使えます。</li>
+        <li>フォームに入力欄のないものを書き足します &mdash; 順番のある
+            <code>success: block &gt; hit</code>、レコーディングの <code>action:</code>、
+            <code>combo:</code> のコンボ表記など。</li>
+        <li><strong>保存</strong>を押します。</li>
+      </ol>
+      <p>タブを切り替えると、作業内容はどちら向きにも引き継がれます。内容はページの中にあるだけで、
+         <strong>保存を押すまで何も書き込まれず</strong>、何度行き来しても
+         <strong>キャンセルですべて破棄されます</strong>。</p>
+      <p>フォームに戻っても、手で書いたスクリプトの書き方は崩れません。テキストがフォームから
+         作り直されるのはフォームで実際に何かを変えたときだけなので、フォームを見てから戻っても、
+         自分で入れた空白や書き方はそのままです。</p>
+      <p>フォームは入り口、WongScript は細かい設定の置き場です。どちらが「本物」ということはなく、
+         どちらかを選ぶ必要もありません &mdash; 同じドリルを2つの形で見ているだけです。</p>
+
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/character-dummy-fields.png') }}" alt="フォームタブのキャラクター（自分）と相手キャラクターのドロップダウン" loading="lazy">
+        <figcaption>キャラクター（自分）と相手キャラクターは別々の設定です。キャラクターはドリルがどの
+        キャラクターの一覧に出るかを決め、相手キャラクターは技名を解決するためだけに使います。</figcaption>
+      </figure>
+
+      <h3 id="sharing-a-whole-deck">ドリルをまとめて共有する <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ドリルページで：</p>
+      <ul>
+        <li><strong>すべて書き出す（.wong）</strong>で、データベースのドリルを全部1つのテキストファイルに
+        ダウンロードします &mdash; そのファイルを友達に送ってください。</li>
+        <li><strong>.wongを読み込む</strong>でドリルを取り込みます &mdash; ファイルを選ぶか、中身を
+        貼り付けます。ドリルはそれぞれ <code>title:</code> 行から始まるので、1つのファイルにいくつでも
+        入れられます。ファイルの一部のドリルに誤りがあっても、残りは取り込まれます &mdash; 何が成功し、
+        何を直せばよいかの一覧が出ます。</li>
+      </ul>
+
+      <p>取り込むとき、<em>すでに持っている</em>ドリル（名前で照合）をどうするか聞かれます：</p>
+      <ul>
+        <li><strong>新しいものだけ追加</strong>は、すでにあるドリルには一切触れません。これが初期値で、
+        自分のドリルを変えられたくないときに友達のパックを入れるならこちらです。</li>
+        <li><strong>このファイルの内容で置き換える</strong>は、ドリルの設定・成功条件・コンボを
+        ファイルの内容で上書きします。</li>
+      </ul>
+      <p><strong>どちらでも、あなたの練習記録は消えません。</strong>連続成功、復習予定、お気に入り、
+      キャラクターごとの記録はファイルではなくあなたのものなので、ドリルを丸ごと置き換えても
+      取り込みでリセットされることはありません。</p>
+
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/export-import.png') }}" alt="ドリルページの「すべて書き出す」と「読み込む」ボタン" loading="lazy">
+        <figcaption>ドリルページのツールバー。「すべて書き出す」は全ドリルを1つの <code>.wong</code> ファイルに
+        書き出します。下の絞り込みで種別、自分のキャラクター、相手キャラクターごとに一覧を絞れます。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="panel panel-magenta" id="in-game">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_profile.png')">
+      <h2>ゲーム内</h2>
+    </div>
+    <div class="help-body">
+      <h3 id="the-menu-bar">メニューバー <span class="help-ver" title="Beast Drills version">0.1.0 &middot; 更新 0.2.1</span></h3>
+      <p>操作はすべて画面上部のバーにあります。<strong>マウスを画面のいちばん上に動かす</strong>
+      まで隠れていて、<strong>F1</strong> で常に表示にできます。メニューを開いている間は消えないので、
+      ドロップダウンの下のほうまで操作できます。</p>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/menu-bar.png') }}" alt="画面上部の Beast Drills メニューバー" loading="lazy">
+        <figcaption>操作画面はこのバーだけです。セッション中は右端にレップ数が表示されます。</figcaption>
+      </figure>
+      <table class="help-table">
+        <thead><tr><th>メニュー</th><th>中身</th></tr></thead>
+        <tbody>
+          <tr><td>ファイル</td><td>何かを作るもの：今のトレーニングモードの設定に名前をつけて新しいドリルとして保存、
+          <strong>直前のコンボをドリルとして保存</strong>
+          <span class="help-ver is-new" title="Beast Drills version">0.2.1</span>（2ヒット以上。コンボの内容が名前になり、
+          そのキャラクターのドリル一覧に入ります）、キャラクターデータの更新、デッキのリセット（開発者用）</td></tr>
+          <tr><td>ドリル</td><td><strong>ドリルの一覧</strong>と、ドリルを始める操作すべて。
+          <em>セッション開始</em>は選択したドリルを、何も選んでいなければ次に予定の来たドリルを始めます。
+          ほかに練習、お気に入りを開始、セッション終了、絞り込み、一覧を更新、全キャラクターを表示、
+          選択を解除、実行中のドリルについての警告</td></tr>
+          <tr><td>集計</td><td>開始／停止、リセット、安全チェックの状態、すべてのカウント。パネルとしても
+          開けます &mdash; 表示 &rarr; 集計</td></tr>
+          <tr><td>設定</td><td>操作ではなく設定：<strong>ブリーフィングを表示</strong>、
+          <strong>終了時に位置をリセット</strong>、マウスカーソルの表示、ウィンドウ配置の保存とリセット、言語</td></tr>
+          <tr><td>表示</td><td>各パネルの表示／非表示、すべて表示／非表示、<strong>コンボ手順</strong>（下記）</td></tr>
+          <tr><td>ヘルプ</td><td>ダッシュボードのアドレスと開くボタン、ホットキーの一覧</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="the-panels">パネル <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ドリルの一覧は以前は独立したパネルでしたが、今は<strong>ドリルメニュー</strong>の中にあります。
+      一覧と開始ボタンだけの浮いたウィンドウは、ウィンドウである意味がないからです。チェックで練習の
+      対象に入れ、クリックで選択、<strong>ダブルクリックで開始</strong>、絞り込み欄に入力すると長い一覧を
+      絞れます。</p>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/drills-menu.png') }}" alt="ドリルメニューを開いたところ。チェックしたドリルと復習予定日" loading="lazy">
+        <figcaption>ドリルメニュー。件数が2,000件中ではなく<em>115件中7件</em>なのは、全キャラクターを表示が
+        オフで、今の組み合わせ（自分と相手のキャラクター）に絞られているからです。チェックは練習の対象、
+        各ドリルの下の日付は次に出てくる日です。</figcaption>
+      </figure>
+      <ul>
+        <li><strong>集計</strong> &mdash; すべてのカウントを、反対の項目と並べて表示します。
+        パネルとメニューの<em>両方</em>で見られます：ラウンドの合間に確かめるならメニュー、
+        プレイしながら数字が動くのを見るならパネルです。</li>
+        <li><strong>ドリル</strong> &mdash; ドリルの一覧をメニューではなくパネルで。セッションを
+        進める間、開いたままにしておけます。<strong>テンキー5</strong>。</li>
+      </ul>
+      <p>ほかに、必要なときだけ出るものが2つあります：ドリルの前の<strong>ブリーフィング</strong>と、
+      終わったあとの<strong>ドリル完了</strong>です。<strong>セッション中はパネルが自動で隠れ</strong>、
+      レップ数は常に表示されるメニューバーの右端に移ります。</p>
+
+      <h3 id="criteria-tally">集計 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>ドリル中でもそうでなくても使える、フリープレイ用のカウンター（数え上げ）です。
+      <strong>自分に有利</strong>と<strong>自分に不利</strong>に分かれていて、誰が行動したかではなく、
+      あなたにとって良い結果か悪い結果かで分けています。自分の投げが空振りしたら、食らったときと同じく
+      「不利」に数えます。左右どちら側にいたかも記録するので、どちら側が苦手かも分かります。
+      集計メニューで確かめるか、パネルを開いて数字の動きを見てください。</p>
+      <p>各行は、ある項目とその反対を並べています &mdash; <code>parry</code>（パリィした）の横に
+      <code>got_parried</code>（パリィされた）、<code>hit</code>（当てた）の横に <code>got_hit</code>
+      （食らった）&mdash; 比べることに意味があるからです。反対のないものは1つで並びます：
+      <code>whiff</code>（空振り）、<code>block_miss</code>（ガードできずに食らった）、
+      <code>parry_miss</code>（パリィせずに食らった）、<code>parry_whiff</code>（パリィ空振り）は
+      どれも自分のミスで、攻め側の対になるものがありません。</p>
+      <figure class="help-figure">
+        <img src="{{ url_for('static', filename='help/tally-panel.png') }}" alt="集計パネル。各項目が反対の項目と2列で並んでいる" loading="lazy">
+        <figcaption><strong>開始を押すまで数えません。</strong>上部にどちらの側で記録しているかが出ます。
+        「not latched」は、まだ何も記録していないという意味です。全部0のときは、検出の故障より
+        開始を押し忘れていることのほうがずっと多いです。</figcaption>
+      </figure>
+      <p>分かりにくい項目の意味：</p>
+      <table class="help-table">
+        <thead><tr><th>項目</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><code>hit_confirm</code></td><td><em>ダメージを与えた</em>コンボ（ヒット確認できた）</td></tr>
+          <tr><td><code>non_hit_confirm</code></td><td>同じ連係が<em>ガードされた</em> &mdash; 出し切ったのに当たらなかった</td></tr>
+          <tr><td><code>hit_high</code> / <code>_mid</code> / <code>_low</code></td><td><em>自分が</em>当てた高さ（上段・中段・下段）。全部中段なら崩せていないということです</td></tr>
+          <tr><td><code>parry_miss</code></td><td>打撃を食らった &mdash; パリィを試しもしなかった</td></tr>
+          <tr><td><code>parry_whiff</code></td><td>パリィを押したのに何も取れなかった &mdash; 逆のミス</td></tr>
+          <tr><td><code>throw_whiff</code></td><td><em>自分の</em>投げが空振りした</td></tr>
+          <tr><td><code>throw_missed_me</code></td><td><em>相手の</em>投げが空振りした</td></tr>
+        </tbody>
+      </table>
+      <p>被弾位置（ヒットゾーン）は集計とは別に<strong>常に</strong>記録しています。集計を動かして
+      いなくても記録され、ダッシュボードの通算のヒートマップになります。オンにする必要はありません。</p>
+
+      <h3 id="combo-steps">コンボ手順 <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></h3>
+      <p>コンボドリルでは、SF6のコンボトライアルと同じように画面左にコンボが表示されます：
+      番号つきのステップが、<em>その技</em>を当てるたびに点灯し、ドライブラッシュ、ステップ、
+      ジャンプ攻撃、溜めのステップには目印がつきます。レップが成功と判定されると
+      <strong>SUCCESS</strong> と表示されます。ステップは採点と同じルールで点灯するので、
+      中Pの代わりに弱Pを当てても中Pのステップは点きません。</p>
+      <p>コンボドリルのブリーフィングの<strong>コンボ手順を表示</strong>のチェックか、
+      <strong>表示 &rarr; コンボ手順</strong>でオン／オフします。表示されるのはオフラインの
+      トレーニングモードだけで、ほかのMODと同じ機能だけを使う独立したMODとして作られています
+      （<a href="#mods">MOD</a>を参照）。</p>
+
+      <h3 id="hotkeys">ホットキー <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <table class="help-table">
+        <thead><tr><th>キー</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>F1</td><td>メニューバーを常に表示（オフなら自動で隠れます）</td></tr>
+          <tr><td>テンキー1</td><td>パネルの表示／非表示</td></tr>
+          <tr><td>テンキー2</td><td>セッションの開始／終了 &mdash; ドリルを選んでいればそれを、なければ予定の来たものを始めます</td></tr>
+          <tr><td>テンキー3</td><td>集計の開始／停止</td></tr>
+          <tr><td>テンキー4</td><td>集計のリセット</td></tr>
+          <tr><td>テンキー5</td><td>ドリルパネルの表示／非表示</td></tr>
+          <tr><td>テンキー7</td><td>ダッシュボードをブラウザで開く</td></tr>
+          <tr><td>テンキー8</td><td>今の設定をドリルとして保存</td></tr>
+          <tr><td>テンキー9</td><td>集計パネルの表示／非表示</td></tr>
+          <tr><td>テンキー0</td><td>ウィンドウ配置のリセット</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="safety">安全性 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>Beast Drills がゲームに書き込むのは、ローカルのオフライン・トレーニングモードの中だけです。
+      その確認は起動時に一度ではなく、毎フレーム行っています。確認に通らなければ何もしません。
+      集計メニューに今の安全チェックの状態が出るので、信じるしかないのではなく、自分の目で確かめられます。
+      オンライン対戦中は読み取りだけで、ゲーム内には何も表示しません。</p>
+    </div>
+  </section>
+
+  <section class="panel" id="pages">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_stats.png')">
+      <h2>各ページ</h2>
+    </div>
+    <div class="help-body">
+      <ul>
+        <li><strong>ダッシュボード</strong> &mdash; 今起きていること：実行中のセッションと、今の組み合わせの
+        被弾位置ヒートマップ。</li>
+        <li><strong>ドリル</strong> &mdash; すべてのドリル。作成、編集、練習対象のチェック、
+        読み込みと書き出し。</li>
+        <li><strong>統計</strong> &mdash; Anki風のパネル：復習回数、予定、カレンダー、定着率、
+        間隔、易しさ、時間帯別、評価の内訳、追加数。</li>
+        <li><strong>対戦記録</strong> &mdash; 記録した実戦の一覧と、ラウンドごとの評価。</li>
+        <li><strong>プロフィール</strong> &mdash; 1キャラクターのすべての記録：ドリル数、予定の来ている数、
+        成功率、平均評価、最高連続成功、ドリルの内訳、被弾位置、いちばん練習が必要なドリル、帯。</li>
+      </ul>
+
+      <h3 id="hit-zones">被弾位置 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>どこに攻撃を食らったかの通算記録を、キャラクターの絵の上に描きます：キャラクターはグレーで、
+      頭・胴・脚に色を重ねます。色が濃いほど、そこにダメージが集中しています。</p>
+      <p>記録は<strong>自分のキャラクター・相手・左右</strong>ごとに分かれています。まだ戦っていない
+      組み合わせは、ほかの相手の数字を借りずに空のままです &mdash; リュウと春麗で同じ数字が出たら、
+      この図は何も教えてくれないことになるからです。</p>
+
+      <h3 id="the-line-under-the-nav">ナビの下の一言 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>あなた自身の数字から作る一言アドバイスを、できるだけふざけた口調で流します。
+      予定の来ているドリル、失敗が続いているドリル、使ったことのないキャラクター、
+      サンドバッグにしがちな相手まで知っています。</p>
+    </div>
+  </section>
+
+  <section class="panel panel-cyan" id="mods">
+    <div class="panel-head" style="--head-icon:url('/static/sf6/icon_stats.png')">
+      <h2>MOD</h2>
+    </div>
+    <div class="help-body">
+      <p>Beast Drills は、ほかの人が上に何かを作れるように設計しています。入り口は2つあり、
+         MODはどちらか一方だけを使ってもかまいません。必要なことはすべてこのページにあります
+         &mdash; あなたが私たちのコードを参照することも、私たちがあなたのコードを参照することもありません。
+         （このページはMOD制作者向けです。ファイル名・キー名・コードは英語のまま書きます。）</p>
+
+      <h3 id="what-will-not-break-under-you">互換性の約束 <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>下の2つの入り口にはどちらもバージョンがあり、何かが壊れてから付けたのではなく、
+         最初のリリースから明記しています。同じメジャーバージョンの間は、文書化した項目を削除・
+         改名・型変更せず、文書化したファイルの場所も形も変えず、有効だった登録ファイルは有効のままです。</p>
+      <p>次のことはいつでも起こりえますが、<b>互換性を壊す変更ではありません</b>：
+         新しい項目や新しいファイルが増えること、キャラクター・ドリル・カウンターの数が増えること。
+         知っている項目だけを読み、残りは無視してください &mdash; 知らないキーで止まるのはパーサー側の不具合です。</p>
+      <p>メジャーバージョンが上がるときは <code>api_version</code> が上がり、古い形は廃止と明記します。
+         推測せず、確かめて対応外なら断ってください。</p>
+
+      <h3 id="reading-beast-drills-from-another-program">ほかのプログラムから読む <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p>Beast Drills が知っていることは、すべてデータフォルダーにただのJSONとして書かれています
+         &mdash; <code>data_dir</code> を変えていなければ <code>Documents\Beast Drills</code>。
+         ファイルを読めるものなら何でも読めます &mdash; ほかの REFramework スクリプト、自作のダッシュボード、
+         OBSのオーバーレイ、表計算ソフト。</p>
+      <p>ゲームフォルダーに置くのは Beast Drills に同梱するものだけです：技名、フレームデータ、翻訳、
+         <code>beast_drills.ini</code> 自体。プレイヤー自身のファイルはあえてそこに置きません。
+         そのフォルダーはMOD管理ツールのもので、MODの更新時に中身を空にするツールもあるからです。</p>
+      <p><code>runtime/live_status.json</code> は<b>30フレームごと</b>（1秒に2回）書き直され、
+         誰がプレイしているか、セッション中か、どのドリルか、集計のすべての値が入っています。
+         <code>shared_database.json</code> はドリル、<code>runtime/inbox.json</code> は次に予定の
+         来ているもので、その <code>heartbeat</code> でサービスが動いているかが分かります。
+         <code>stats.db</code> は長期の履歴で、読み取り専用で開いてください。</p>
+      <p><b>1秒に2回はアニメーションには足りませんが、これは意図的です。</b>1秒に60回書くファイルは、
+         プレイヤーのディスクに負担をかけます。ゆっくり変わるもの &mdash; どのドリルか、誰がプレイしているか、
+         ここまでのスコア &mdash; はこのファイルで、フレーム単位のものはゲームから直接読んでください。
+         あなたのMODも Beast Drills と同じようにSF6を読めます。コンボ数が変わったそのフレームが欲しいなら、
+         ゲームから取ってください。このファイルにあるのは、そうしても手に入らない半分 &mdash;
+         Beast Drills が今プレイヤーに<em>何をさせようとしているか</em>です。</p>
+
+      <h4>Lua で書く場合</h4>
+      <p><b>REFramework は Lua を <code>reframework/data/</code> の中に閉じ込めていて、外には出られません。</b>
+         <code>json.load_file</code> は絶対パスを拒否し、<code>io.open</code> は起動時にデータフォルダーの
+         外に出られない版に差し替えられ、<code>fs.read</code> と <code>fs.glob</code> もそこが起点です。
+         Lua のMODは <code>Documents\Beast Drills</code> をまったく開けません。</p>
+      <p>そのため、オーバーレイが実際に見るファイルは、制限のないゲームフォルダーに<b>複製</b>しています：</p>
+      <pre class="help-pre"><code>&lt;SF6&gt;/reframework/data/BeastDrills_data/runtime/live_status.json</code></pre>
+      <p>複製するのは計算で作り直せる状態だけで、そこが要点です：このファイルは1秒に2回書き直されるので、
+         MOD管理ツールが消しても失うものはありません。データベースと復習履歴は決して複製しません
+         &mdash; 取り返しのつかないものの2つ目のコピーを、消されるフォルダーに置くのは便利ではなく罠です。
+         それらは <code>data_dir</code> から読んでください。C# のプラグインにはこの制限がないので、どちらも読めます。</p>
+      <p><code>debug/</code> の中はインターフェースではなく調査用の出力です。予告なく変わったり
+         消えたりします。そのためのフォルダーです。</p>
+      <p>上のフォルダーは<b>初期値</b>です。<code>beast_drills.ini</code> には <code>data_dir</code> の設定があり、
+         ダッシュボードを別のPCで動かしている人はネットワーク共有を指しているはずです &mdash;
+         パスを決めつけず、設定を読んでください。</p>
+
+      <p><code>runtime/live_status.json</code> の中身：</p>
+      <table class="help-table">
+        <tr><td><code>frame</code></td>
+            <td>毎フレーム増えます。前回読んだ値と比べれば、「ゲームが動いている」のか「ファイルが古い」のかが
+                分かります。ゲームを閉じてもファイルは消えないので、新しいかどうかは自分で判断してください
+                &mdash; Beast Drills のサービスは5秒を過ぎたものを無視します。</td></tr>
+        <tr><td><code>session_status</code></td>
+            <td>ドリルのセッション中かどうかと、その状態。</td></tr>
+        <tr><td><code>session_attempt_count</code><br>
+                <code>session_attempts_target</code><br>
+                <code>session_success_count</code></td>
+            <td>終えたレップ数、目標のレップ数、成功したレップ数。</td></tr>
+        <tr><td><code>tally_enabled</code>, <code>criteria_tally</code></td>
+            <td>集計が動いているかと、0でないすべての値。項目名は増えていくので、知らないものも有効として扱ってください。</td></tr>
+        <tr><td><code>criteria_tally_side</code></td>
+            <td>集計を始めたときの左右、または null。null も正しい値です：左右なしで数えたものはどちらにも属しません。</td></tr>
+        <tr><td><code>p1_character_id</code>, <code>p2_character_id</code></td>
+            <td>誰がプレイしているか（例：<code>"jp"</code>）。ゲームが知らせるまでは null。</td></tr>
+        <tr><td><code>p1_combo_cnt</code>, <code>p2_combo_cnt</code></td>
+            <td>コンボ数。<b>役に立つのは攻撃側の値です</b> &mdash; 食らっている側は本物のコンボの間も0のままで、
+                それを知るまでにこのプロジェクトは長く遠回りしました。</td></tr>
+        <tr><td><code>dummy_slot_id</code><br>
+                <code>dummy_reversal_active_slot</code></td>
+            <td>再生中のレコーディングスロットと、出たリバーサルの選択肢。</td></tr>
+      </table>
+
+      <h3 id="changing-something-from-another-program">ほかのプログラムから変更する <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p><code>shared_database.json</code> と統計のデータベースには絶対に書き込まないでください。
+         書き込むのは1か所だけで、それが2つのプログラムが予定データを取り合って連続成功を失うのを防いでいます。
+         代わりに <code>outbox/</code> にイベントを1ファイル1つずつ置いてください。サービスが拾って適用し、
+         ファイルを消します。予定の状態と復習履歴は編集から拒否するので、MODがどんな要求を作っても
+         練習の記録が失われることはありません。</p>
+
+      <h3 id="putting-a-mod-in-this-menu-bar">メニューバーにMODを置く <span class="help-ver" title="Beast Drills version">0.1.0 &middot; 更新 0.2.0</span></h3>
+      <p><code>BeastDrills_data/mods/</code> にメニューに置きたいものを書いたJSONファイルを置くと表示されます
+         &mdash; <b>MODS</b> の下、またはプレイヤーが探しそうなら <b>FILE</b> や <b>VIEW</b> の中に。
+         コンパイルも、コードの共有もありません。</p>
+      <pre class="help-pre"><code>mods/frametrap.json
+
+{
+  "api_version": 1,
+  "name": "Frame Trap Finder",
+  "author": "somebody",
+  "menu": "MODS",
+  "items": [
+    { "id": "open", "label": "Open", "hotkey": "F7" },
+    { "id": "scan", "label": "Scan current character" }
+  ]
+}</code></pre>
+      <p><code>api_version</code> と <code>items</code> は必須、<code>name</code> はサブメニューの名前です。
+         <code>label</code> は<b>省略可</b>で、省くとその項目が動かすものの本当の名前を表示するので、
+         合わせて直す手間がありません。短くしたいときだけ書いてください。</p>
+
+      <h4>項目に実際の動作をさせる</h4>
+      <p>登録しただけで手に入るのは<b>メニュー項目</b>、ホットキー、設定です。動作は付きません：
+         クリックは <code>mods/_events/</code> にファイルが書かれるだけです。そのフォルダーを自分で見張るか、
+         項目が何を動かすかを教えてくれれば、こちらで動かします。</p>
+      <table class="help-table">
+        <tr><th>キー</th><th>動作</th></tr>
+        <tr><td><code>call</code></td>
+            <td>項目がクリックされたときに呼ぶ Lua のグローバル（ドット区切り：<code>"MyMod.scan"</code>）。
+                関数なら項目の <code>args</code> で呼び、<b>真偽値なら切り替えます</b>（メニュー項目がフラグに
+                対して意味するのはそれです）。パスはグローバル表をたどるだけで実行はしないので、名前を書いても
+                すでにある値にしか届きません。</td></tr>
+        <tr><td><code>checkbox</code></td>
+            <td>あなたのMODがすでに描いているチェックボックスの文字列。Beast Drills は
+                <code>imgui.checkbox</code> を通るのを見ているので、メニューのチェックはあなたの本当の状態で、
+                クリックするとその本当の状態が変わります。あなたのコードは何も変わりません。</td></tr>
+        <tr><td><code>from</code></td>
+            <td>プレイヤーがあなたの画面を開く前にその値を知るため、画面外で一度だけ実行するスクリプトファイル。
+                なければ、最初に描かれるまで項目は正直に<em>（まだ見ていません）</em>と表示します。</td></tr>
+        <tr><td><code>window</code></td>
+            <td>このトグルが開くウィンドウ。その閉じるボタンでトグルがオフになります &mdash; 設定する価値があります。
+                <code>begin_window(title, true, 0)</code> を呼んで結果を捨てるMODの×ボタンは動かないからです。</td></tr>
+        <tr><td><code>draw</code></td>
+            <td>分かりやすいメニュー項目のないMOD向けに、画面全体を Beast Drills のパネルの中に表示します。
+                登録している間は2か所ではなく<em>1か所</em>に描かれます &mdash; 複製ではなく移動です。</td></tr>
+        <tr><td><code>toggle</code> <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></td>
+            <td><b>Lua ではない</b>MOD（REFramework.NET のプラグイン）用のチェックボックス。<code>checkbox</code> は
+                Lua の <code>imgui.checkbox</code> を見る方式なので、C# のMODは <code>toggle</code> と書き、
+                自分の状態を <code>mods/_toggles/&lt;yourmod&gt;.json</code> に項目IDごとに書き出します
+                （<code>{"show": true}</code>）。クリックはこれまでどおり <code>mods/_events/</code> に届きます。
+                Beast Drills 自身のコンボ手順もこの方式で作られています。</td></tr>
+      </table>
+      <p><b>ローカル変数には誰も届きません。</b>状態がローカル変数にあり、表示文字列に頼りたくないなら、
+         外に出してください &mdash; 1行足すだけで、動作は変わらず、同じ表です：</p>
+      <pre class="help-pre"><code>local p1 = make_config()
+
+MyMod = { p1 = p1 }        -- the only line you add</code></pre>
+      <pre class="help-pre"><code>{ "id": "p1", "label": "P1 info", "call": "MyMod.p1.enabled" }</code></pre>
+      <p>あなたの描画コードはこれまでどおりの項目を読むだけで、誰が設定したかを知ることはありません。
+         これが確実な方法で、<code>checkbox</code> はそうしていないMOD向けです。</p>
+      <p>対応していないバージョンのファイルは、中途半端に登録せず全体を拒否し、メニューにそう表示します。
+         読み取れないファイルも飛ばさずにエラーと一緒に一覧に出します &mdash; 末尾のカンマ1つで1時間
+         失うのを防ぐために、このページはあります。</p>
+      <h4>ファイルを自分のMODの中に置く</h4>
+      <p>ほかの人のフォルダーにファイルをコピーすると、あとで困ります：プレイヤーがあなたのMODを
+         アンインストールしても、私たちのメニューには何もない項目が残ります。ファイルは自分のMODの中に置き、
+         <code>beast_drills.ini</code> に1行書いてください（左側の名前は自由です）：</p>
+      <pre class="help-pre"><code>[mods]
+frame_trap_finder = reframework/autorun/FrameTraps/beast.json</code></pre>
+      <p>これで項目はあなたのMODと一緒に現れ、一緒に消え、私たちのフォルダーにあなたのものは何も残りません。
+         ほかはすべて同じです：同じ形式、同じイベント、同じホットキー。</p>
+      <p>パスはストリートファイター6のフォルダーからの相対パスなので、Steam ライブラリを別のドライブに
+         移しても使えます。そのフォルダーの<em>外</em>を指すパスは無視します &mdash; <code>.ini</code> は
+         フォーラムの書き込みを貼り付けるかもしれないテキストファイルだからです。ファイルが見つからない
+         パスは黙って飛ばします（アンインストールしたMODはそう見えるからです）。それ以外の誤りは
+         <code>mods/</code> のファイルと同じくメニューに表示します。すでに登録されている名前は2つ目を拒否して
+         そう表示します。名前が同じだとイベントのファイル名も同じになり、片方のクリックをもう片方が
+         黙って受け取ってしまうからです。</p>
+
+      <h4>設定はプレイヤーのファイルに</h4>
+      <p>MODごとに設定ファイルを探させると、<code>beast_drills.ini</code> が解決した問題に逆戻りです。
+         同じ登録ファイルで設定を宣言すれば、プレイヤーのファイルに現れます：</p>
+      <pre class="help-pre"><code>"settings": [
+  { "key": "gap_frames", "default": 3,
+    "note": "How wide a gap counts as a frame trap." }
+]</code></pre>
+      <p>Beast Drills は登録名のセクションを追加し、あなたの説明をコメントとして書きます（自分の設定と同じ作り方です）。
+         <b>ini を読む必要はありません</b> &mdash; 解決済みの値が、すでに見張っているイベントの隣に
+         <code>mods/_settings/&lt;yourmod&gt;.json</code> として届きます。私たちが管理する形式を読むパーサーが
+         2つあると、初期値について食い違うことがあり、その食い違いは<em>あなたの</em>MODの中で黙って起き、
+         あなたが私たちのファイルをデバッグすることになるからです。</p>
+      <p>そのファイルはプレイヤーのものなので、3つ約束します：プレイヤーが設定した値は<b>決して</b>変えません。
+         プレイヤーのコメントと並び順は残ります。MODをアンインストールしてもセクションは消えません &mdash;
+         1週間後に戻しても、設定はそのままです。</p>
+
+      <p>クリックは1つのファイルとして届きます：</p>
+      <pre class="help-pre"><code>mods/_events/frametrap_1787900000000.json
+
+{ "mod": "frametrap", "item": "scan", "at": 1787900000 }</code></pre>
+      <p>そのフォルダーを見張り、処理したら<b>ファイルを空にしてください</b>。タイムスタンプはミリ秒で
+         ゼロ埋めなので、普通に並べ替えれば時刻順になります。</p>
+      <pre class="help-pre"><code>pcall(fs.write, path, "")   -- consumed</code></pre>
+      <p><b>削除しようとせず、空にしてください。</b>REFramework は Lua から <code>os.remove</code> を外していて、
+         <code>fs</code> にあるのは <code>glob</code>、<code>read</code>、<code>write</code> だけなので、
+         Lua のMODはファイルを削除できません。<code>os.remove</code> は nil を呼び、<code>pcall</code> がそれを
+         握りつぶし、イベントはそのまま残って、見るたびに読み直され処理し直されます。そう作ったトグルは
+         1秒に何度も切り替わります。空のファイルは読み取れないので二重に処理されることはなく、Beast Drills が
+         空のファイルを片付け、1分より古いものも消すので、入っていないMODのクリックがたまり続けることもありません。</p>
+      <p>この間接的な仕組みは意図的です：クリックのときに動いていなかったMODも、起動すればそれを受け取れます。</p>
+      <p>MODはホットキーも登録できます。Beast Drills やほかのMODがすでに使っているキーは拒否し、理由を
+         ショートカットの位置に表示するので、効かないキーが謎になることはありません。MOD同士ではアルファベット順で
+         先のものが使います &mdash; 恣意的ですが、読み込み順で入れ替わるより安定しています。
+         <code>"Num9"</code> も <code>"Numpad9"</code> も使え、読めない名前も無視せず同じように表示します。
+         ホットキーは Beast Drills の画面にフォーカスがあるときだけ効くので、MODのホットキーが対戦中に
+         漏れることはありません。</p>
+
+      <h3 id="what-a-mod-cannot-do">MODにできないこと <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
+      <p><em>ゲーム画面の上に直接</em>描くことはできません。それには ImGui の描画リストが要りますが、
+         ここのプラグインからそれを使うとSF6が落ちます &mdash; 2回試して2回ともゲームが落ちました。
+         MODはこれまでどおり REFramework を通して自分のウィンドウを描いてください。</p>
+      <p>ほかのMODの<b>ローカル変数</b>には届きません。値がローカル変数にあり、どのグローバルも持っていなければ、
+         誰にも名前で指せません &mdash; 私たちにも、ほかのMODにも、デバッグライブラリにも。だから
+         <code>checkbox</code> は文字列を見ているのです：変数に届かなくても、値は私たちが包める関数を通るからです。</p>
+      <p>内部への手出しもできません &mdash; セッションのオブジェクトもスケジューラーもありません。読む価値の
+         あるものは上のファイルにすべてあり、そちらは内部と違って、アップデートをまたいで変わらないよう守っています。</p>
+    </div>
+  </section>
+  </div>
+
+
+</div>
+<script>
+// スクリーンショットをクリックすると本文の幅いっぱいに拡大し、もう一度クリックで戻す。
+document.querySelectorAll(".help-figure img").forEach((img) => {
+  img.title = "クリックで拡大";
+  img.addEventListener("click", () => {
+    const fig = img.closest(".help-figure");
+    const zoomed = fig.classList.toggle("is-zoomed");
+    img.title = zoomed ? "クリックで縮小" : "クリックで拡大";
+  });
+});
+</script>
+<script src="{{ url_for('static', filename='help.js') }}"></script>
+</body>
+</html>

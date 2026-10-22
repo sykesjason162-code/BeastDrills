@@ -107,7 +107,17 @@
     get current() { return current; },
 
     ready: (async () => {
-      await load(localStorage.getItem(STORE_KEY) || "en");
+      const code = localStorage.getItem(STORE_KEY) || "en";
+
+      if (location.pathname === "/help") {
+        const want = code === "en" ? "" : code;
+        const have = new URLSearchParams(location.search).get("lang") || "";
+        if (want !== have) {
+          location.replace("/help" + (want ? `?lang=${encodeURIComponent(want)}` : "") + location.hash);
+          return;
+        }
+      }
+      await load(code);
 
       const onReady = () => { mountPicker(); applyLinks(); applyDom(); };
       if (document.readyState === "loading")

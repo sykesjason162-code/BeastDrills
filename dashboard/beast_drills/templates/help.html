@@ -31,13 +31,13 @@
       ones that are <em>due</em>, the app watches what actually happened, and the
       ones you keep missing come back sooner.</p>
 
-      <h3>A session, start to finish</h3>
+      <h3>A session, start to finish <span class="help-ver" title="Beast Drills version">0.1.0 &middot; updated 0.2.1</span></h3>
       <ol>
-        <li><strong>Start</strong> from the menu bar (Session &rarr; Start Session,
+        <li><strong>Start</strong> from the menu bar (DRILLS &rarr; Start Session,
         or Numpad2). It picks the drill that is most overdue.</li>
         <li>A <strong>briefing</strong> appears first: what the drill is, how it is
         set up, and what counts as landing it. Start Drill begins; Cancel backs out.
-        Turn briefings off in Session if you already know the deck.</li>
+        Turn briefings off in OPTIONS &rarr; Show Briefings if you already know the deck.</li>
         <li>The app applies the whole Training Mode setup for you &mdash; dummy
         behaviour, recordings, reversals, guard, counter state, positions. Every
         setting the drill does <em>not</em> mention is reset rather than inherited,
@@ -47,17 +47,17 @@
         many landed and the grade, with <strong>Next Drill</strong>,
         <strong>Repeat</strong> and <strong>Done</strong>.</li>
         <li>The court is handed back: replay stopped, dummy standing, both players
-        centred. Turn that off in Session &rarr; <strong>Reset Court When Done</strong>
+        centred. Turn that off in OPTIONS &rarr; <strong>Reset Court When Done</strong>
         if you would rather keep practising the same setup by hand.</li>
       </ol>
 
-      <h3>Grades and scheduling</h3>
+      <h3>Grades and scheduling <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Each session ends in one of four grades, exactly like Anki: <strong>Again</strong>,
       <strong>Hard</strong>, <strong>Good</strong>, <strong>Easy</strong>. Better grades
       push the next review further out; Again brings it back tomorrow and resets the
       streak. You never pick the grade &mdash; it comes from what the app observed.</p>
 
-      <h3>Choosing what is in rotation</h3>
+      <h3>Choosing what is in rotation <span class="help-ver" title="Beast Drills version">0.1.0 &middot; updated 0.2.0</span></h3>
       <p>Every drill has a tick box, in-game and on the Drills page. The rule is worth
       knowing because it is not obvious:</p>
       <ul>
@@ -65,8 +65,13 @@
         <li><strong>Anything ticked</strong> &mdash; only the ticked ones run.</li>
       </ul>
       <p>The in-game list says which of the two you are in, above the list.</p>
+      <p>A new install starts with <strong>ten starter drills ticked</strong>, so the
+      first session has something to run, rather than the whole library at once.
+      Untick everything to run every due drill on purpose; just know that an
+      update which adds new drills ticks the starters again while nothing is
+      ticked. With anything ticked, an update leaves your choice alone.</p>
 
-      <h3>Difficulty</h3>
+      <h3>Difficulty <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Every drill can carry a difficulty &mdash; <code>very-easy</code>,
       <code>easy</code>, <code>medium</code>, <code>hard</code>,
       <code>very-hard</code> &mdash; and automatic selection uses it. There is no
@@ -85,7 +90,7 @@
       yourself always works &mdash; nothing is locked away from someone who
       deliberately goes and gets it.</p>
 
-      <h3>Finding a drill</h3>
+      <h3>Finding a drill <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>The library is large &mdash; over two thousand drills once the SuperCombo
       import landed &mdash; so the Drills page has a real search box rather than a
       filter. It searches everything, not just what is on screen. Terms are ANDed:
@@ -118,7 +123,7 @@
       over the name and id. It is there to reach a drill you can already name, not to
       run the full query language twice in two languages.</p>
 
-      <h3>Matches</h3>
+      <h3>Matches <span class="help-ver" title="Beast Drills version">0.1.2</span></h3>
       <p>Every real match you play &mdash; Arcade, Versus, Ranked, Casual, Battle Hub,
       Custom Room &mdash; is recorded in the background and graded on the
       <a href="/matches">Matches</a> page, round by round, on your tally rather than
@@ -126,8 +131,36 @@
       appears in game while you play. A drill can declare what it <code>trains:</code>,
       and the newest match puts the drills for what went worst first in your next
       session &mdash; among drills already due, never instead of them.</p>
+      <p>Your overall totals from every match are kept for good. The individual
+      matches are trimmed, oldest first, once they pass 50&nbsp;MB
+      (<code>[matches] max_size_mb</code> in <code>beast_drills.ini</code>; 0 means
+      no limit). <strong>Star a match</strong> on the Matches page to keep it
+      forever.</p>
 
-      <h3>Favorites</h3>
+      <h3>Belts <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></h3>
+      <p>The <strong>Profile</strong> page shows a belt for each character you play,
+      White to Black, worked out from your results on that character's
+      <em>belt drills</em>. Each belt asks for every skill at that level to be
+      passed: at least three of that skill's drills there (or all of them, if
+      there are fewer) at 70% or better. Belt drills are scheduled and practised
+      like any other drill; they just count toward a belt, and outside a developer
+      install they are read-only so they cannot be changed by accident.</p>
+
+      <h3>Practice <span class="help-ver is-new" title="Beast Drills version">0.2.1</span></h3>
+      <p><strong>DRILLS &rarr; Practice</strong> sets the game up exactly the way the
+      drill does &mdash; the dummy, its recordings and reversals, guard, position and
+      speed &mdash; and then gets out of the way. There is no 10-rep stop, no
+      <em>how did it feel</em> prompt at the end, and <strong>nothing is scheduled or
+      added to your stats</strong>: practising a drill does not count as reviewing it,
+      so its due date and streak stay where they were.</p>
+      <p>It practises the drill you have selected, or the next one due when you have
+      not selected any. The bar shows <em>PRACTICE</em>, the drill, and how many reps
+      landed; on a combo drill, Combo Steps still lights each step and says SUCCESS.
+      Stop it with <strong>Stop Practice</strong> in the same menu, or
+      <strong>Numpad 2</strong>, and the Training Mode settings go back the way they
+      were, as after a session.</p>
+
+      <h3>Favorites <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>The star on a drill card marks it a <strong>favorite</strong>. Favorites sort
       to the <strong>front of the Drills page</strong> &mdash; across the whole library,
       not just whatever page you are on &mdash; and <code>favorite:yes</code> finds them
@@ -145,7 +178,7 @@
         </tbody>
       </table>
 
-      <h3>Drills with no character</h3>
+      <h3>Drills with no character <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Most drills name a character. Some do not &mdash; anti-airs, parries,
       hit-confirms, throw tech. Those are <strong>fundamentals</strong>, and they are
       scheduled <strong>separately for every character you play</strong>.</p>
@@ -157,7 +190,7 @@
       for the character actually loaded. With the game closed there is nobody to answer
       for, so it falls back to a combined view.</p>
 
-      <h3>Where the drills came from</h3>
+      <h3>Where the drills came from <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Most of the library is imported from the <strong>SuperCombo wiki</strong>:
       around two thousand combos across all thirty characters, with each combo's
       position, damage, difficulty and notes carried across. Frame data for every
@@ -170,9 +203,9 @@
       than approximated: a success rule that is subtly wrong grades Again forever and
       looks exactly like a broken detector.</p>
 
-      <h3>When a drill cannot score</h3>
-      <p>Two warnings appear in the panel during a session, and both mean the failure
-      is not yours:</p>
+      <h3>When a drill cannot score <span class="help-ver" title="Beast Drills version">0.1.0 &middot; updated 0.2.1</span></h3>
+      <p>Three warnings can appear in the DRILLS menu during a session, and each means
+      the failure is not yours:</p>
       <ul>
         <li><strong>"no success criteria"</strong> &mdash; the drill has no rule for
         what counts, so every rep grades Again no matter how it is played. Fix it on
@@ -200,7 +233,7 @@
         <figcaption>The WongScript tab. Save parses whatever is in the textarea and commits it directly -- there is no separate parse step.</figcaption>
       </figure>
 
-      <h3>A full example</h3>
+      <h3>A full example <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <pre class="mono help-example">title: CH VS DELAYED THROW TECH
 description: "Counter on dummy throwing, throw on dummy doing nothing"
 position: dummy-corner-right
@@ -220,7 +253,7 @@ success: throw
 
 fixed-success: throw, counter-hit, punish-counter-hit</pre>
 
-      <h3>Two different ways to set what the dummy does</h3>
+      <h3>Two different ways to set what the dummy does <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>SF6 has two separate systems for controlling the dummy, and WongScript
       configures them differently:</p>
       <ul>
@@ -285,7 +318,7 @@ success: perfect-parry</pre>
       <code>weight:</code> alone never create content, only <code>action:</code>
       does.</p>
 
-      <h3>Recorded-pattern notation</h3>
+      <h3>Recorded-pattern notation <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>The dummy's actual input for a Recording slot, written the same way SF6's
       own combo notation already writes a quick motion input (<code>236P</code>,
       <code>623P</code>) -- with one addition: a bracket form for anything that
@@ -364,7 +397,7 @@ success: perfect-parry</pre>
       2-frame default -- still exact, just less compact than something typed by
       hand.</p>
 
-      <h3>Every line, what it does</h3>
+      <h3>Every line, what it does <span class="help-ver" title="Beast Drills version">0.1.0 &middot; updated 0.2.0</span></h3>
       <table class="help-table">
         <thead><tr><th>Line</th><th>Meaning</th></tr></thead>
         <tbody>
@@ -387,21 +420,22 @@ success: perfect-parry</pre>
           <tr><td><code>action:</code></td><td>Meaning depends on which kind of slot is open. Inside a <code>wake-up-rev-slot:</code>/<code>block-rev-slot:</code>/<code>damage-rev-slot:</code> block: <code>type=&lt;category&gt; skill=&lt;name&gt;, &lt;n&gt;f</code> (see "Action names" below). Inside a <code>rec-slot:</code> block: the dummy's actual input, in FGC motion notation (<code>236HP</code>, <code>[6:10f]</code>, etc. -- see "Recorded-pattern notation" above). Optional for a recording slot -- leave out if it already has real content from Training Mode or a previous capture.</td></tr>
           <tr><td><code>success:</code></td><td>What YOU need to do for that slot to count as a success. Comma-separated if any one of them counts (e.g. <code>counter-hit, punish-counter-hit</code>), or use <code>&gt;</code> to require things <em>in order</em> &mdash; <code>block &gt; hit</code> means block first, then hit. See "Success in order" below.</td></tr>
           <tr><td><code>fixed-success:</code></td><td>A top-level override that applies every rep regardless of which slot fired -- for drills where the tool can't tell which slot fired but every outcome grades the same way either way.</td></tr>
-          <tr><td><code>combo:</code></td><td>Attack-string success for the open slot -- "land THIS move or combo", written in the same motion notation as <code>action:</code> (<code>2MK, HP, 236MP</code>). A single move just has to hit; a multi-move string has to land as a real combo. Matching is a prefix, so extra hits <em>on the end</em> are fine &mdash; nobody is ever marked down for carrying a combo further. What the named moves must do is land as an <strong>unbroken run</strong>, in order: an extra hit <em>between</em> two of them is a different combo, not a longer one, and it does not match. Where a gap is genuinely allowed, say so with <code>...</code>. <code>...</code> means "anything here": put it at the <em>start</em> to match anywhere rather than from the first hit (for combos whose opener is deliberately unspecified &mdash; "any heavy starter &gt; ..."), or in the <em>middle</em> to leave a gap &mdash; <code>HP, HP, ..., 236HP</code> requires those two, then anything, then that one. <code>special</code> means any special move of the character being played, so <code>2MK, special</code> is a cancel combo that works for everyone. Supers are not specials.</td></tr>
+          <tr><td><code>combo:</code> <span class="help-ver" title="Beast Drills version">updated 0.2.0</span></td><td>Attack-string success for the open slot -- "land THIS move or combo", written in the same motion notation as <code>action:</code> (<code>2MK, HP, 236MP</code>). A single move just has to hit; a multi-move string has to land as a real combo. Matching is a prefix, so extra hits <em>on the end</em> are fine &mdash; nobody is ever marked down for carrying a combo further. What the named moves must do is land as an <strong>unbroken run</strong>, in order: an extra hit <em>between</em> two of them is a different combo, not a longer one, and it does not match. Where a gap is genuinely allowed, say so with <code>...</code>. <code>...</code> means "anything here": put it at the <em>start</em> to match anywhere rather than from the first hit (for combos whose opener is deliberately unspecified &mdash; "any heavy starter &gt; ..."), or in the <em>middle</em> to leave a gap &mdash; <code>HP, HP, ..., 236HP</code> requires those two, then anything, then that one. <code>special</code> means any special move of the character being played, so <code>2MK, special</code> is a cancel combo that works for everyone. Supers are not specials.</td></tr>
           <tr><td><code>fixed-combo:</code></td><td>The same thing as a top-level override, applied every rep regardless of which slot fired -- the <code>combo:</code> counterpart to <code>fixed-success:</code>.</td></tr>
           <tr><td><code>health:</code> <code>drive:</code> <code>sa:</code></td><td>What each player starts every rep with. One number is <em>yours</em>; two, comma-separated, is <code>mine, theirs</code> &mdash; the same shape <code>position:</code> uses. Health is a percentage in steps of 10, Drive is 0&ndash;6, SA is 0&ndash;3. So <code>drive: 0, 6</code> is burnout practice against a full-meter opponent, and <code>sa: 3</code> gives you a Level 3 to work with. Leave one out and the game's own default applies (full health, full Drive, no Super) &mdash; and it is applied <em>every</em> session, so a burnout drill cannot leave the next drill without Drive.</td></tr>
           <tr><td><code>health-recovery:</code> <code>drive-recovery:</code> <code>sa-recovery:</code></td><td>How each gauge <em>behaves</em> after it is set &mdash; same <code>mine, theirs</code> shape. <b>refill</b> (the default) brings the value back every rep, which is what makes a drill a drill; <b>standard</b> is match behaviour, so rep two starts wherever rep one left you; <b>fixed</b> locks the gauge and it cannot move at all. You will rarely want anything but the default: <code>health-recovery: standard</code> is for a drill you intend to be able to lose.</td></tr>
           <tr><td><code>cpu-level:</code></td><td>Lv 1&ndash;8, for a drill whose dummy is set to CPU.</td></tr>
+          <tr><td><code>dummy-controls:</code> <span class="help-ver is-new" title="Beast Drills version">0.2.1</span></td><td>The game's <strong>Dummy Settings &rarr; Dummy Controls</strong>: <code>stand</code> (the plain Dummy setting), <code>human</code> (Player 2 controls it) or <code>cpu</code>. <em>Save Current Setup as Drill</em> writes it for you, and editing the drill keeps it. Leave it out and the dummy is the plain Dummy.</td></tr>
           <tr><td><code>counter:</code></td><td>One of <code>standard</code> (default), <code>counter</code>, <code>punish-counter</code>, <code>random</code>. Puts the dummy permanently in that counter-hit state, which is how a punish-counter combo gets practised without needing a recording for it.</td></tr>
           <tr><td><code>require-slot:</code></td><td><code>yes</code> (default) or <code>no</code>. <code>no</code> means the drill's Recording slots are <em>ambient</em> -- the dummy is doing something so you're not hitting a statue, but which slot fired has nothing to do with success. Grading then comes purely from <code>fixed-combo:</code>/<code>fixed-success:</code>.</td></tr>
           <tr><td><code>trains:</code></td><td>Comma-separated list of the <em>Against me</em> tally categories this drill is a fix for (e.g. <code>trains: got_thrown, got_hit</code>). Recorded matches rank what kept happening to you and put the drills that claim it first. Optional; unknown category names are rejected rather than silently ignored.</td></tr>
           <tr><td><code>trains-for:</code></td><td>The other half, from the <em>What I did</em> tally: the skill this drill <em>builds</em>, rather than the mistake it stops (e.g. <code>trains-for: hit_confirm</code>). Its own vocabulary, so a receiver category like <code>got_thrown</code> is rejected here &mdash; a drill cannot train <em>for</em> being thrown. Optional, and a drill may have both, one or neither.</td></tr>
-          <tr><td><code>belt-drill:</code></td><td>Makes the drill a belt drill: it counts toward a belt on the Profile page. Name the skill it teaches &mdash; <code>belt-drill: anti-air</code> &mdash; and it sits at that skill's starting belt, one belt higher for each <code>difficulty:</code> step above easy. Pin the belt yourself with <code>belt-drill: anti-air, blue</code>. <code>belt-drill: combo</code> places a combo by its difficulty alone (very easy Yellow, easy Blue, medium Red, hard Black), so it needs a <code>difficulty:</code> line. <code>belt-drill: no</code>, or no line, makes it a regular drill. The editor shows which belt a drill counts toward. Belt drills can be changed only in a developer install; elsewhere they are read-only.</td></tr>
+          <tr><td><code>belt-drill:</code> <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></td><td>Makes the drill a belt drill: it counts toward a belt on the Profile page. Name the skill it teaches &mdash; <code>belt-drill: anti-air</code> &mdash; and it sits at that skill's starting belt, one belt higher for each <code>difficulty:</code> step above easy. Pin the belt yourself with <code>belt-drill: anti-air, blue</code>. <code>belt-drill: combo</code> places a combo by its difficulty alone (very easy Yellow, easy Blue, medium Red, hard Black), so it needs a <code>difficulty:</code> line. <code>belt-drill: no</code>, or no line, makes it a regular drill. The editor shows which belt a drill counts toward. Belt drills can be changed only in a developer install; elsewhere they are read-only.</td></tr>
           <tr><td><code>difficulty:</code></td><td>One of <code>very-easy</code>, <code>easy</code>, <code>medium</code>, <code>hard</code>, <code>very-hard</code>. Gates automatic selection, so a beginner is not handed a frame-perfect route (see <a href="#practising">Difficulty</a>). Optional &mdash; a drill without one is never gated, because unknown is not the same as hard.</td></tr>
         </tbody>
       </table>
 
-      <h3>What you can put after <code>success:</code></h3>
+      <h3>What you can put after <code>success:</code> <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Every value the grader understands. A slot can name more than one,
          comma-separated, and any of them counts.</p>
       <table class="help-table">
@@ -425,7 +459,7 @@ success: perfect-parry</pre>
         <tr><td><code>do-nothing</code></td><td>You correctly declined to press. Note this one cannot be used with <code>attempts: action</code> &mdash; an attempt has to be bounded by something that happens.</td></tr>
       </table>
 
-      <h3>Success in order</h3>
+      <h3>Success in order <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>A comma means <em>any of these</em>. A <code>&gt;</code> means
          <em>this, and then that</em> &mdash; the order you have to do them
          in for the rep to count.</p>
@@ -471,7 +505,7 @@ block-then-punish  =  block &gt; hit</pre>
 
 
 
-      <h3>Test drills</h3>
+      <h3>Test drills <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>A drill whose id starts with <code>debug_</code> is a
          <strong>test drill</strong>: it exists to exercise a detector,
          not to teach anything. Name one <code>debug_ something</code>
@@ -492,7 +526,7 @@ block-then-punish  =  block &gt; hit</pre>
          is that the thing it checks cannot be confirmed by reading the
          code.</p>
 
-      <h3>Action names -- "type" and "skill"</h3>
+      <h3>Action names -- "type" and "skill" <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Every Wake-up Reversal option belongs to one of 5 categories
       (<code>type=</code>), and within that category it's the Nth move in that
       category's own list (<code>skill=</code>). These were confirmed directly from
@@ -515,7 +549,7 @@ block-then-punish  =  block &gt; hit</pre>
   <section class="panel" id="dashboard-tools">
     <div class="panel-head"><h2>Dashboard tools</h2></div>
     <div class="help-body">
-      <h3>Creating and editing a drill</h3>
+      <h3>Creating and editing a drill <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Click <strong>+ New Drill</strong> (or <strong>Edit</strong> on an existing
       one) to open the modal. It has two tabs that both save the same way:</p>
       <ul>
@@ -569,7 +603,7 @@ block-then-punish  =  block &gt; hit</pre>
         <figcaption>Character (player) and Dummy (opponent) are independent. Character filters which deck a drill appears in; Dummy only resolves friendly move names.</figcaption>
       </figure>
 
-      <h3>Sharing a whole deck</h3>
+      <h3>Sharing a whole deck <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>On the Drills page:</p>
       <ul>
         <li><strong>Export All (.wong)</strong> downloads every drill in your database
@@ -604,7 +638,7 @@ block-then-punish  =  block &gt; hit</pre>
       <h2>In-game</h2>
     </div>
     <div class="help-body">
-      <h3>The menu bar</h3>
+      <h3>The menu bar <span class="help-ver" title="Beast Drills version">0.1.0 &middot; updated 0.2.1</span></h3>
       <p>Everything lives on a bar across the top of the screen. It hides itself until
       you <strong>move the mouse to the very top</strong>, and <strong>F1</strong>
       keeps it up permanently. It stays visible while one of its menus is open, so you
@@ -617,7 +651,10 @@ block-then-punish  =  block &gt; hit</pre>
         <thead><tr><th>Menu</th><th>What is in it</th></tr></thead>
         <tbody>
           <tr><td>File</td><td>Things that produce data: name and save the current Training
-          Mode setup as a new drill, update character data, reset the deck (dev)</td></tr>
+          Mode setup as a new drill, <strong>save the combo you just landed as a drill</strong>
+          <span class="help-ver is-new" title="Beast Drills version">0.2.1</span> (two hits or more; it
+          is named after the combo and appears in your drill list for your character), update
+          character data, reset the deck (dev)</td></tr>
           <tr><td>Drills</td><td><strong>The whole drill list</strong>, and everything that
           starts one. <em>Start Session</em> runs the drill you have selected, or the next one
           due when you have not selected any; then Start Favorites, Stop Session, a filter box,
@@ -626,14 +663,14 @@ block-then-punish  =  block &gt; hit</pre>
           <tr><td>Tally</td><td>Start/stop, reset, the safety gate, and every counter. Also
           available as a panel &mdash; View &rarr; Tally</td></tr>
           <tr><td>Options</td><td>Settings, as opposed to actions: <strong>Show Briefings</strong>,
-          <strong>Reset Court When Done</strong>, draw the mouse cursor, and saving or resetting
-          the window layout</td></tr>
-          <tr><td>View</td><td>Show or hide each panel, and show/hide all of them at once</td></tr>
+          <strong>Reset Court When Done</strong>, draw the mouse cursor, saving or resetting
+          the window layout, and the language</td></tr>
+          <tr><td>View</td><td>Show or hide each panel, show/hide all of them at once, and <strong>Combo Steps</strong> (below)</td></tr>
           <tr><td>Help</td><td>The dashboard address and a button to open it, and every hotkey</td></tr>
         </tbody>
       </table>
 
-      <h3>The panels</h3>
+      <h3>The panels <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>The drill list used to be a panel of its own. It is not any more &mdash; it
       lives in the <strong>Drills menu</strong>, because a floating window holding a
       list and a start button is a window for the sake of being one. Tick a drill to
@@ -659,7 +696,7 @@ block-then-punish  =  block &gt; hit</pre>
       and the rep count moves to the right-hand end of the menu bar, which is always
       up.</p>
 
-      <h3>Criteria Tally</h3>
+      <h3>Criteria Tally <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>A free-play counter that runs with or without a drill, split into
       <strong>In my favour</strong> and <strong>Against me</strong> &mdash; good and bad
       outcomes for you, rather than who performed the action. Your own whiffed throw
@@ -693,8 +730,20 @@ block-then-punish  =  block &gt; hit</pre>
       <p>Hit zones are recorded separately and <strong>always</strong>, whether the
       tally is running or not &mdash; that is the lifetime heat map on the dashboard,
       and it does not need switching on.</p>
+      <h3>Combo Steps <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></h3>
+      <p>On a combo drill, the combo is shown down the left of the screen the way
+      SF6's Combo Trials shows one: numbered steps, each lit as you land
+      <em>that move</em>, with tags on the steps that are a Drive Rush, a dash, a
+      jump attack or a charge. When the rep is graded a success it says
+      <strong>SUCCESS</strong>. The steps light by the same rule the grade uses, so
+      a light punch in place of a medium does not light the medium's step.</p>
+      <p>Switch it on or off with the <strong>Show combo steps</strong> box on a
+      combo drill's briefing, or <strong>View &rarr; Combo Steps</strong>. It only
+      draws in offline Training Mode, and it is built as a separate mod
+      (<a href="#mods">Mods</a>), using only what any other mod can use.</p>
 
-      <h3>Hotkeys</h3>
+
+      <h3>Hotkeys <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <table class="help-table">
         <thead><tr><th>Key</th><th>Action</th></tr></thead>
         <tbody>
@@ -711,11 +760,12 @@ block-then-punish  =  block &gt; hit</pre>
         </tbody>
       </table>
 
-      <h3>Safety</h3>
+      <h3>Safety <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Beast Drills only ever writes to the game in local, offline Training Mode, and
       it re-checks that every frame rather than once at startup. If the check fails it
       does nothing at all. The Tally menu shows the gate's current state, so you can
-      see it rather than take it on trust.</p>
+      see it rather than take it on trust. During an online match it only reads, and
+      draws nothing in game.</p>
     </div>
   </section>
 
@@ -731,12 +781,14 @@ block-then-punish  =  block &gt; hit</pre>
         rotation, import and export.</li>
         <li><strong>Stats</strong> &mdash; the Anki-style panels: reviews, forecast,
         calendar, retention, intervals, ease, hourly breakdown, answer buttons, added.</li>
+        <li><strong>Matches</strong> &mdash; every real match recorded, graded round by
+        round.</li>
         <li><strong>Profile</strong> &mdash; one character's whole record: drills, due
         count, success rate, average grade, best streak, their drill mix, their hit
-        zones, and which of their drills need the most work.</li>
+        zones, which of their drills need the most work, and their belt.</li>
       </ul>
 
-      <h3>Hit zones</h3>
+      <h3>Hit zones <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>A lifetime record of where you get hit, drawn on the character themselves:
       greyed out, with the zone colours washed over head, body and legs. Hot means
       most of your damage arrives there.</p>
@@ -744,7 +796,7 @@ block-then-punish  =  block &gt; hit</pre>
       reads as empty rather than borrowing another opponent's numbers &mdash; if Ryu
       and Chun-Li showed the same figures, the map would be telling you nothing.</p>
 
-      <h3>The line under the nav</h3>
+      <h3>The line under the nav <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Suggestions drawn from your own numbers, in the daftest voice available. It
       knows what is due, which drills you keep failing, who you never play, and who you
       keep using as a punching bag.</p>
@@ -761,7 +813,7 @@ block-then-punish  =  block &gt; hit</pre>
          is on this page &mdash; you never reference our code, and we never
          reference yours.</p>
 
-      <h3>What will not break under you</h3>
+      <h3>What will not break under you <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Both surfaces below are versioned, and the version is stated from
          the first release rather than added when something first breaks.
          Within a major version, a documented field will not be removed,
@@ -776,7 +828,7 @@ block-then-punish  =  block &gt; hit</pre>
          up and the old shape is documented as gone. Check it and refuse
          rather than guess.</p>
 
-      <h3>Reading Beast Drills from another program</h3>
+      <h3>Reading Beast Drills from another program <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Everything Beast Drills knows is written as plain JSON in your
          data folder &mdash; <code>Documents\Beast Drills</code> unless you
          changed <code>data_dir</code>. Anything that can read a file can
@@ -864,7 +916,7 @@ block-then-punish  =  block &gt; hit</pre>
                 fired.</td></tr>
       </table>
 
-      <h3>Changing something from another program</h3>
+      <h3>Changing something from another program <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>Never write to <code>shared_database.json</code> or the stats
          database. They have exactly one writer, and that is what stops two
          programs racing over your scheduling data and losing a streak.
@@ -873,7 +925,7 @@ block-then-punish  =  block &gt; hit</pre>
          state and review history are refused from an edit, so a mod cannot
          cost you practice history however it builds the request.</p>
 
-      <h3>Putting a mod in this menu bar</h3>
+      <h3>Putting a mod in this menu bar <span class="help-ver" title="Beast Drills version">0.1.0 &middot; updated 0.2.0</span></h3>
       <p>Drop a JSON file in <code>BeastDrills_data/mods/</code> naming what you
          want in the menu, and it appears &mdash; under <b>MODS</b>, or
          inside <b>FILE</b> or <b>VIEW</b> if that is where a player would
@@ -931,7 +983,7 @@ block-then-punish  =  block &gt; hit</pre>
                 mod with no obvious menu items. While a registration claims
                 it, it draws in <em>one</em> place rather than two &mdash; it
                 moves, it does not duplicate.</td></tr>
-        <tr><td><code>toggle</code></td>
+        <tr><td><code>toggle</code> <span class="help-ver is-new" title="Beast Drills version">0.2.0</span></td>
             <td>A checkbox for a mod that is <b>not Lua</b> (a REFramework.NET
                 plugin). <code>checkbox</code> only works by watching a Lua
                 <code>imgui.checkbox</code>, so a C# mod says <code>toggle</code>
@@ -1030,7 +1082,7 @@ frame_trap_finder = reframework/autorun/FrameTraps/beast.json</code></pre>
          than ignored. Bindings only fire while the Beast Drills interface
          has focus, so a mod hotkey can never leak into the match.</p>
 
-      <h3>What a mod cannot do</h3>
+      <h3>What a mod cannot do <span class="help-ver" title="Beast Drills version">0.1.0</span></h3>
       <p>It cannot draw <em>over the game</em>. That needs an ImGui draw
          list, and those crash SF6 from inside a plugin here &mdash; twice,
          both times taking the game down. A mod draws its own windows

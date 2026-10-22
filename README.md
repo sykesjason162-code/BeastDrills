@@ -280,6 +280,17 @@ the dashboard's Drills page; with nothing ticked, everything is in rotation.
   profile. They work like any drill, but are read-only so they cannot be
   changed by accident; **Duplicate** one to make your own version (a copy
   does not count toward a belt).
+- **Practice, without the schedule.** **DRILLS → Practice** sets the game
+  up exactly like a drill and gets out of the way: no 10-rep stop, no
+  grading prompt, and nothing is scheduled or added to your stats. Play as
+  long as you like; the bar shows how many reps landed, and **Stop
+  Practice** (or Numpad 2) puts your Training settings back.
+- **Save the combo you just did.** Land a combo of two hits or more, then
+  **FILE → Save Last Combo as Drill**: it becomes a combo drill for your
+  character, named after the combo and graded by the same rules as every
+  combo drill. The menu says what it was saved as, or why it could not be.
+- **Drill cards say who you practised it against** -- a row of "vs Mai 12"
+  chips under the characters you played it as.
 
 - **TALLY** counts what happened both ways — what you did to them and what
   they did to you — across a session or a whole practice night.
@@ -399,9 +410,8 @@ for `BeastDrills.dll` under `reframework\plugins\managed\`. Then open
 
 - **Stop your session before you queue for a match.** Queueing Ranked or
   Casual from Training Mode takes you to the match and back. Beast Drills
-  stops writing to the game as soon as it detects an online match, but it
-  does not yet pause the session, so you return to a drill that is still
-  counting. Stop it first (**Numpad 2**) and start again afterwards.
+  stops writing to the game as soon as it detects an online match, but the
+  session keeps running, so you return to a drill that is still counting. Stop it first (**Numpad 2**) and start again afterwards.
 - **The belt drills are first drafts.** The curriculum's 155 hand-written
   drills have not all been played through yet, so some will need their
   timing or criteria adjusted. Report one that grades wrong and it will be

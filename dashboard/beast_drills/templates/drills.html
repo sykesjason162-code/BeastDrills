@@ -16,9 +16,9 @@
     <div class="panel-head">
       <h2 data-t>Drills</h2>
       <div style="display:flex; gap:10px">
-        <a id="export-wong-link" href="/api/wongscript/export" class="btn" download>Export All (.wong)</a>
+        <a id="export-wong-link" href="/api/wongscript/export" class="btn" download data-t>Export All (.wong)</a>
         <button id="import-wong-btn" class="btn" data-t>Import .wong</button>
-        <button id="new-drill-btn" class="btn btn-accent">+ New Drill</button>
+        <button id="new-drill-btn" class="btn btn-accent" data-t>+ New Drill</button>
       </div>
     </div>
 
@@ -111,12 +111,12 @@
       <button type="button" id="tab-wong-btn" class="tab-btn" data-t>WongScript</button>
     </div>
     <div id="modal-form-panel" class="modal-body">
-      <div class="section-divider first">Basics</div>
-      <label>Name<input id="f-name" type="text"></label>
-      <label>Description<textarea id="f-description" rows="2"></textarea></label>
+      <div class="section-divider first" data-t>Basics</div>
+      <label><span data-t>Name</span><input id="f-name" type="text"></label>
+      <label><span data-t>Description</span><textarea id="f-description" rows="2"></textarea></label>
       <div class="two-col">
-        <label>Character (player)<select id="f-character"></select></label>
-        <label>Dummy (opponent)<select id="f-dummy-character"></select></label>
+        <label><span data-t>Character (player)</span><select id="f-character"></select></label>
+        <label><span data-t>Dummy (opponent)</span><select id="f-dummy-character"></select></label>
       </div>
 
       <!-- On the form so a save sends what is really there: difficulty
@@ -127,7 +127,7 @@
            they want and say they are a blackbelt."). -->
       <label><span data-t>Difficulty</span><select id="f-difficulty"></select></label>
 
-      <div class="section-divider">Trains against</div>
+      <div class="section-divider" data-t>Trains against</div>
       <div class="section">
         <div class="section-head">
           <span class="hint">Which of your <em>Receiver</em> tallies this drill is a fix for. Every recorded match ranks what kept happening to you and puts the drills that claim it first in your next session -- e.g. a throw-tech drill trains against <code>got_thrown</code>. Optional.</span>
@@ -135,7 +135,7 @@
         <div id="f-trains-chips" class="chip-row"></div>
       </div>
 
-      <div class="section-divider">Training for</div>
+      <div class="section-divider" data-t>Training for</div>
       <div class="section">
         <div class="section-head">
           <span class="hint">Which of your <em>Giver</em> tallies this drill builds. <code>Trains against</code> says which mistake it stops; this says which skill it grows -- e.g. a hit-confirm drill trains for <code>hit_confirm</code>. Optional, and a drill can reasonably have both, one, or neither.</span>
@@ -151,76 +151,80 @@
         web form of unrelated inputs. The real menus and their option
         sets are captured in docs/TRAINING_MENUS.md.
       #}
-      <div class="section-divider menu">Dummy Settings</div>
-      <label>Block Setting<select id="f-block-setting"></select>
-        <span class="hint">The dummy's guard. Reset when a drill does not name one -- never inherited from the last drill.</span>
+      <div class="section-divider menu" data-t>Dummy Settings</div>
+      <label><span data-t>Block Setting</span><select id="f-block-setting"></select>
+        <span class="hint" data-t>The dummy's guard. Reset when a drill does not name one -- never inherited from the last drill.</span>
       </label>
 
-      <label>CPU Level<input id="f-cpu-level" type="number" min="1" max="8" placeholder="leave blank">
-        <span class="hint">Lv 1&ndash;8, and only in play while Dummy Controls is CPU &mdash; but written either way, so a level you set here does not follow you into the next drill.</span>
+      <label><span data-t>Dummy Controls</span><select id="f-dummy-controls"></select>
+        <span class="hint" data-t>The game's Dummy Settings &rarr; Dummy Controls. Save Current Setup fills it in; leave it at Dummy unless the drill needs the CPU or Player 2.</span>
       </label>
 
-      <div class="section-divider menu">Parameter Settings</div>
+      <label><span data-t>CPU Level</span><input id="f-cpu-level" type="number" min="1" max="8" placeholder="leave blank">
+        <span class="hint" data-t>Lv 1&ndash;8, and only in play while Dummy Controls is CPU &mdash; but written either way, so a level you set here does not follow you into the next drill.</span>
+      </label>
+
+      <div class="section-divider menu" data-t>Parameter Settings</div>
       <div class="section">
         <div class="section-head">
           <span class="hint">Health and meter at the start of every rep. <b>Mine</b> is you, <b>theirs</b> is the dummy. Blank means the game's own default &mdash; full health, full Drive, no Super &mdash; and that default is applied every session, so the last drill's burnout setup cannot follow you into this one.<br><b>Recovery</b> is how the gauge behaves afterwards, and it defaults to <b>refill</b>: the value comes back every rep, which is what makes a drill a drill. <b>Standard</b> is match behaviour &mdash; rep two starts wherever rep one left you &mdash; and <b>fixed</b> locks the gauge where it is.</span>
         </div>
         <div class="gauge-grid">
-          <span class="gauge-label">Health %</span>
+          <span class="gauge-label" data-t>Health %</span>
           <input id="f-health-mine" type="number" min="0" max="100" step="10" placeholder="100">
           <input id="f-health-theirs" type="number" min="0" max="100" step="10" placeholder="100">
-          <span class="gauge-label">Health recovery</span>
+          <span class="gauge-label" data-t>Health recovery</span>
           <select id="f-health_recovery-mine"></select>
           <select id="f-health_recovery-theirs"></select>
-          <span class="gauge-label">Drive Gauge</span>
+          <span class="gauge-label" data-t>Drive Gauge</span>
           <input id="f-drive-mine" type="number" min="0" max="6" placeholder="6">
           <input id="f-drive-theirs" type="number" min="0" max="6" placeholder="6">
-          <span class="gauge-label">Drive recovery</span>
+          <span class="gauge-label" data-t>Drive recovery</span>
           <select id="f-drive_recovery-mine"></select>
           <select id="f-drive_recovery-theirs"></select>
-          <span class="gauge-label">SA Gauge</span>
+          <span class="gauge-label" data-t>SA Gauge</span>
           <input id="f-sa-mine" type="number" min="0" max="3" placeholder="0">
           <input id="f-sa-theirs" type="number" min="0" max="3" placeholder="0">
-          <span class="gauge-label">SA recovery</span>
+          <span class="gauge-label" data-t>SA recovery</span>
           <select id="f-sa_recovery-mine"></select>
           <select id="f-sa_recovery-theirs"></select>
           <span class="gauge-head"></span>
-          <span class="gauge-head">mine</span>
-          <span class="gauge-head">theirs</span>
+          <span class="gauge-head" data-t>mine</span>
+          <span class="gauge-head" data-t>theirs</span>
         </div>
       </div>
 
-      <div class="section-divider menu">Recording Settings</div>
-      <label>Repeat Replay<select id="f-repeat-replay"></select>
-        <span class="hint">Drill-wide, matching the dropdown below the slot list in-game. Only relevant when this drill has Recording slots.</span>
+      <div class="section-divider menu" data-t>Recording Settings</div>
+      <label><span data-t>Repeat Replay</span><select id="f-repeat-replay"></select>
+        <span class="hint" data-t>Drill-wide, matching the dropdown below the slot list in-game. Only relevant when this drill has Recording slots.</span>
       </label>
 
-      <div class="section-divider menu">Recording &amp; Reversal Slots</div>
+      <div class="section-divider menu" data-t>Recording &amp; Reversal Slots</div>
       <div class="section">
         <div class="section-head">
-          <span class="hint">One row per active slot. Pick any category(ies) that count as success for that slot.</span>
+          <span class="hint" data-t>One row per active slot. Pick any category(ies) that count as success for that slot.</span>
         </div>
         <div id="f-slots-container"></div>
-        <button type="button" id="add-slot-btn" class="btn">+ Add Slot</button>
+        <button type="button" id="add-slot-btn" class="btn" data-t>+ Add Slot</button>
       </div>
 
       <details class="advanced">
-        <summary>Advanced: raw recording/reversal slot config</summary>
-        <p class="hint">Which slots are active and their raw technique config (index/type/skill_index/delay) -- normally set from the per-slot rows above, or captured live from Training Mode. Preserved as-is unless you edit it here.</p>
+        <summary data-t>Advanced: raw recording/reversal slot config</summary>
+        <p class="hint" data-t>Which slots are active and their raw technique config (index/type/skill_index/delay) -- normally set from the per-slot rows above, or captured live from Training Mode. Preserved as-is unless you edit it here.</p>
         <textarea id="f-advanced-slots" rows="4" class="mono"></textarea>
       </details>
 
-      <div class="section-divider menu">Environment Settings</div>
-      <label>Position<select id="f-position"></select>
-        <span class="hint">Where the round starts.</span>
+      <div class="section-divider menu" data-t>Environment Settings</div>
+      <label><span data-t>Position</span><select id="f-position"></select>
+        <span class="hint" data-t>Where the round starts.</span>
       </label>
 
-      <div class="section-divider">Timing</div>
+      <div class="section-divider" data-t>Timing</div>
       <div class="two-col">
-        <label>Response window (frames)<input id="f-response-window" type="number" placeholder="auto (20)"></label>
-        <label>Game speed (0-10)<input id="f-game-speed" type="number" min="0" max="10" placeholder="auto"></label>
+        <label><span data-t>Response window (frames)</span><input id="f-response-window" type="number" placeholder="auto (20)"></label>
+        <label><span data-t>Game speed (0-10)</span><input id="f-game-speed" type="number" min="0" max="10" placeholder="auto"></label>
       </div>
-      <label class="reps-field">Reps (attempts per session)<input id="f-reps" type="number" min="1" placeholder="10 (default)"></label>
+      <label class="reps-field"><span data-t>Reps (attempts per session)</span><input id="f-reps" type="number" min="1" placeholder="10 (default)"></label>
       <label><span data-t>What counts as one attempt</span>
         <select id="f-attempts">
           <option value="slot" data-t>Each time the dummy's slot plays</option>
@@ -232,11 +236,11 @@
         <span class="hint suggestion" id="f-attempts-suggestion" hidden></span>
       </label>
 
-      <div class="section-divider">Success criteria</div>
+      <div class="section-divider" data-t>Success criteria</div>
       <div class="section">
         <div class="section-head">
-          <h4>Fixed response</h4>
-          <span class="hint">Applies every rep, for drills that can't detect which slot fired. Leave empty if this drill uses per-slot criteria below instead.</span>
+          <h4 data-t>Fixed response</h4>
+          <span class="hint" data-t>Applies every rep, for drills that can't detect which slot fired. Leave empty if this drill uses per-slot criteria below instead.</span>
         </div>
         <div id="f-fixed-response-chips" class="chip-row"></div>
       </div>
@@ -255,29 +259,29 @@
       <details class="section" id="f-advanced-criteria">
         <summary data-t>Advanced criteria</summary>
         <div class="section-head">
-          <span class="hint">Ordered criteria and against-me criteria, in the same
+          <span class="hint" data-t>Ordered criteria and against-me criteria, in the same
           grammar WongScript uses. Leave blank unless you need them.</span>
         </div>
 
-        <label class="filter-field-label" for="f-adv-success">Success (ordered)</label>
+        <label class="filter-field-label" for="f-adv-success" data-t>Success (ordered)</label>
         <input type="text" id="f-adv-success" class="mono"
                placeholder="block &gt; combo, pressure">
-        <span class="hint">Overrides the chips above when set. Use &gt; for
+        <span class="hint" data-t>Overrides the chips above when set. Use &gt; for
         &ldquo;then&rdquo;, commas for alternatives.</span>
 
-        <label class="filter-field-label" for="f-against">Against me</label>
+        <label class="filter-field-label" for="f-against" data-t="Against me criteria">Against me</label>
         <input type="text" id="f-against" class="mono" placeholder="got-hit, got-thrown">
-        <span class="hint">Scores the absence of these. Mixed with the criteria
+        <span class="hint" data-t>Scores the absence of these. Mixed with the criteria
         above, each is worth half the session.</span>
 
-        <label class="filter-field-label" for="f-setup">Expected setup</label>
+        <label class="filter-field-label" for="f-setup" data-t>Expected setup</label>
         <input type="text" id="f-setup" class="mono" placeholder="got-hit">
-        <span class="hint">What the drill does TO you on purpose, so it stops
+        <span class="hint" data-t>What the drill does TO you on purpose, so it stops
         failing the rep. Earns nothing on its own.</span>
 
-        <label class="filter-field-label" for="f-survive">Survive (seconds)</label>
+        <label class="filter-field-label" for="f-survive" data-t>Survive (seconds)</label>
         <input type="number" id="f-survive" min="1" max="99" placeholder="">
-        <span class="hint">Ends each rep on the clock instead of when the
+        <span class="hint" data-t>Ends each rep on the clock instead of when the
         exchange settles. Pairs with Against me.</span>
 
         <div id="adv-criteria-error" class="form-error hidden"></div>
@@ -286,11 +290,11 @@
       <p id="form-error" class="form-error hidden"></p>
     </div>
     <div id="modal-wong-panel" class="modal-body hidden">
-      <p class="hint">Write or edit a drill as WongScript -- loaded automatically for an existing drill, empty for a new one. Save (below) parses it and commits directly, no separate step needed. See docs/idea-list.md for the format. `dummy:` (optional) is only used here to resolve/render friendly action: names -- it's never saved to the drill itself.</p>
+      <p class="hint" data-t>Write or edit a drill as WongScript -- loaded automatically for an existing drill, empty for a new one. Save (below) parses it and commits directly, no separate step needed. The WongScript section of the help page has the format. Render with dummy (optional) only changes how action: names are shown here -- it is never saved to the drill.</p>
       <textarea id="f-wong" rows="18" class="mono" spellcheck="false"></textarea>
       <div id="wong-errors" class="form-error hidden"></div>
       <div class="wong-actions">
-        <label class="wong-dummy-label">Render with dummy:<input id="f-wong-dummy" type="text" placeholder="e.g. ryu" style="width:120px"></label>
+        <label class="wong-dummy-label"><span data-t>Render with dummy:</span><input id="f-wong-dummy" type="text" placeholder="e.g. ryu" style="width:120px"></label>
       </div>
     </div>
     <div class="modal-foot">
@@ -352,22 +356,22 @@
       <button id="import-close" class="btn-icon">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="hint">Choose a .wong file, or paste its contents below -- one drill or many (each starts its own `title:` line). Drills that fail to parse are skipped and listed below; the rest still import.</p>
+      <p class="hint" data-t>Choose a .wong file, or paste its contents below -- one drill or many (each starts its own `title:` line). Drills that fail to parse are skipped and listed below; the rest still import.</p>
       <div class="import-file">
         <input type="file" id="f-import-file" accept=".wong,.txt,text/plain">
         <span id="import-file-name" class="hint"></span>
       </div>
 
-      <div class="section-divider">Drills you already have</div>
+      <div class="section-divider" data-t>Drills you already have</div>
       <label class="radio-row">
         <input type="radio" name="import-mode" value="append" checked>
-        <span><strong>Add only what is new</strong><br>
-        <span class="hint">Anything you already have is left exactly as it is, streaks included.</span></span>
+        <span><strong data-t>Add only what is new</strong><br>
+        <span class="hint" data-t>Anything you already have is left exactly as it is, streaks included.</span></span>
       </label>
       <label class="radio-row">
         <input type="radio" name="import-mode" value="override">
-        <span><strong>Replace them with this file's versions</strong><br>
-        <span class="hint">Overwrites the drill itself. Your progress on it -- streaks, due dates, favourites -- is kept either way.</span></span>
+        <span><strong data-t>Replace them with this file's versions</strong><br>
+        <span class="hint" data-t>Overwrites the drill itself. Your progress on it -- streaks, due dates, favourites -- is kept either way.</span></span>
       </label>
 
       <div class="section-divider">WongScript</div>

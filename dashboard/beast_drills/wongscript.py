@@ -604,6 +604,16 @@ def _p_cpu_level(st, key, value, line_no):
     if not problems:
         st.training_settings["cpu_level"] = level
 
+DUMMY_ACTIONS = ["stand", "crouch", "jump", "human", "cpu", "replay", "record_and_replay"]
+
+def _p_dummy_controls(st, key, value, line_no):
+    snake = _from_kebab(value)
+    if snake not in DUMMY_ACTIONS:
+        st.err(line_no, f"unknown dummy-controls '{value}' -- one of: "
+                        + ", ".join(_to_kebab(a) for a in DUMMY_ACTIONS[:5]))
+    else:
+        st.training_settings["dummy_action"] = snake
+
 def _p_block(st, key, value, line_no):
     snake = _from_kebab(value)
     if snake not in BLOCK_SETTINGS:
@@ -880,6 +890,7 @@ _PARSE_HANDLERS = {
     "position": _p_position,
     "cpu-level": _p_cpu_level,
     "cpu_level": _p_cpu_level,
+    "dummy-controls": _p_dummy_controls,
     "block": _p_block,
     "character": _p_character,
     "dummy": _p_dummy,
@@ -1112,6 +1123,8 @@ def _render_settings(drill, ts):
              for gauge in _gauges.PAIR_KEYS if ts.get(gauge)]
     if ts.get("cpu_level") is not None:
         lines.append(f"cpu-level: {ts['cpu_level']}")
+    if ts.get("dummy_action"):
+        lines.append(f"dummy-controls: {_to_kebab(ts['dummy_action'])}")
     if drill.get("difficulty"):
         lines.append(f"difficulty: {drill['difficulty']}")
     belt_text = belts.render_belt_drill(drill.get(belts.FIELD))
